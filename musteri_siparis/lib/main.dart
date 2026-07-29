@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/sepet_provider.dart';
-import 'screens/menu_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(
@@ -21,7 +21,7 @@ class MusteriSiparisApp extends StatelessWidget {
       title: 'Şeker Restoran',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.deepOrange, useMaterial3: true),
-      home: const MenuScreen(),
+      home: const LoginScreen(),
     );
   }
 }
