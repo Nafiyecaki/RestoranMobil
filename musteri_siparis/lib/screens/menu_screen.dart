@@ -13,13 +13,14 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  final ApiService _api = ApiService();
+  // ✅ DÜZELTİLDİ: ApiService _api = ApiService() kaldırıldı
   late Future<List<Urun>> _urunlerFuture;
 
   @override
   void initState() {
     super.initState();
-    _urunlerFuture = _api.getUrunler();
+    // ✅ DÜZELTİLDİ: _api.getUrunler() → ApiService.getUrunler()
+    _urunlerFuture = ApiService.getUrunler();
   }
 
   @override
