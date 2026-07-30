@@ -19,6 +19,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _beniHatirla = false;
   String? _errorMessage;
 
+  // 🎨 Şeker Restoran Logosundan Alınan Renkler
+  static const Color _primaryColor = Color(0xFFA67B5B);    // Altın kahve
+  static const Color _secondaryColor = Color(0xFFD4A574);  // Açık altın
+  static const Color _accentColor = Color(0xFF8B6B4D);     // Koyu kahve
+  static const Color _lightBg = Color(0xFFFDF8F3);         // Krem
+  static const Color _darkBg = Color(0xFF1A1410);          // Koyu
+
   @override
   void dispose() {
     _kullaniciAdiController.dispose();
@@ -37,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // ✅ DÜZELTİLDİ: ApiService().login() → ApiService.login()
       final result = await ApiService.login(
         kullaniciAdi: _kullaniciAdiController.text.trim(),
         sifre: _sifreController.text,
@@ -69,126 +75,203 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Widget _buildLeftPanel(bool isDesktop) {
-    return Container(
-      width: double.infinity,
-      height: isDesktop ? null : 280,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Colors.deepOrange, Colors.orange],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [_darkBg, const Color(0xFF2A1F18)]
+                : [_lightBg, const Color(0xFFF5EDE6)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
-              child: Container(
-                color: Colors.black.withOpacity(0.3),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: size.width > 600 ? 40 : 20,
+                vertical: 20,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: size.height * 0.04),
+                  
+                  // ✅ LOGO - BURADA!
+                  _buildLogo(size, isDark),
+                  
+                  SizedBox(height: size.height * 0.04),
+                  
+                  // Form Kartı
+                  _buildFormCard(isDark, size),
+                  
+                  SizedBox(height: size.height * 0.03),
+                  
+                  // Test Hesabı
+                  _buildTestAccount(isDark),
+                  
+                  SizedBox(height: size.height * 0.04),
+                ],
               ),
             ),
           ),
-          const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.restaurant,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Şeker Restoran',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 2,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Yönetim Paneli',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildRightPanel(bool isDesktop) {
+  // ============================================================
+  // 🍽️ LOGO - Şeker Restoran (Attığın Logo)
+  // ============================================================
+  Widget _buildLogo(Size size, bool isDark) {
+    double logoSize = size.width > 600 ? 120 : size.width * 0.3;
+    if (logoSize > 140) logoSize = 140;
+    if (logoSize < 80) logoSize = 80;
+
+    return Column(
+      children: [
+        // Logo Container
+        Container(
+          width: logoSize,
+          height: logoSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: _primaryColor.withValues(alpha: 0.25),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            image: const DecorationImage(
+              image: AssetImage('assets/images/brand-logo.jpeg'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: _secondaryColor.withValues(alpha: 0.3),
+                width: 3,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Başlık
+        Text(
+          'Şeker Restoran',
+          style: TextStyle(
+            fontSize: size.width > 600 ? 28 : 24,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : _accentColor,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: _secondaryColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'Yönetim Paneli',
+            style: TextStyle(
+              fontSize: size.width > 600 ? 14 : 12,
+              color: isDark ? Colors.grey[400] : _primaryColor,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // 📋 FORM KARTI
+  // ============================================================
+  Widget _buildFormCard(bool isDark, Size size) {
     return Container(
-      padding: EdgeInsets.all(isDesktop ? 56.0 : 40.0),
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxWidth: size.width > 600 ? 400 : double.infinity,
+      ),
+      padding: EdgeInsets.all(size.width > 600 ? 32 : 24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9).withOpacity(0.4),
+        color: isDark
+            ? const Color(0xFF2A1F18).withValues(alpha: 0.9)
+            : Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : _secondaryColor.withValues(alpha: 0.15),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.4)
+                : _primaryColor.withValues(alpha: 0.08),
+            blurRadius: 40,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Form(
         key: _formKey,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'HOŞ GELDİNİZ',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF020617),
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Giriş Yapın',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF334155),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Panelinize erişmek için bilgilerinizi girin.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF475569),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-
+            // Hata Mesajı
             if (_errorMessage != null)
               Container(
+                width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
+            // Kullanıcı Adı
             const Text(
               'Kullanıcı Adı',
               style: TextStyle(
@@ -200,25 +283,48 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _kullaniciAdiController,
-              style: const TextStyle(color: Color(0xFF0F172A)),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.65),
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFFDF8F3),
                 hintText: 'kullanıcı adınız',
-                hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF64748B)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
+                ),
+                prefixIcon: Icon(
+                  Icons.person_outline,
+                  color: _primaryColor,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 16,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.4)),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : _secondaryColor.withValues(alpha: 0.2),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.4)),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : _secondaryColor.withValues(alpha: 0.2),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: const Color(0xFF94A3B8).withOpacity(0.5), width: 2),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _accentColor,
+                    width: 2,
+                  ),
                 ),
               ),
               validator: (value) {
@@ -228,8 +334,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
+            // Şifre
             const Text(
               'Şifre',
               style: TextStyle(
@@ -242,17 +349,28 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _sifreController,
               obscureText: !_showPassword,
-              style: const TextStyle(color: Color(0xFF0F172A)),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.65),
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFFDF8F3),
                 hintText: '••••••••',
-                hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF64748B)),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
+                ),
+                prefixIcon: Icon(
+                  Icons.lock_outline,
+                  color: _primaryColor,
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: const Color(0xFF64748B),
+                    _showPassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: _primaryColor,
                   ),
                   onPressed: () {
                     setState(() {
@@ -260,18 +378,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     });
                   },
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 16,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.4)),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : _secondaryColor.withValues(alpha: 0.2),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.4)),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : _secondaryColor.withValues(alpha: 0.2),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: const Color(0xFF94A3B8).withOpacity(0.5), width: 2),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _accentColor,
+                    width: 2,
+                  ),
                 ),
               ),
               validator: (value) {
@@ -283,14 +415,15 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Beni Hatırla & Şifremi Unuttum
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
                     SizedBox(
-                      width: 24,
-                      height: 24,
+                      width: 22,
+                      height: 22,
                       child: Checkbox(
                         value: _beniHatirla,
                         onChanged: (val) {
@@ -298,20 +431,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             _beniHatirla = val ?? false;
                           });
                         },
-                        activeColor: const Color(0xFF64748B),
+                        activeColor: _accentColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        side: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.3)
+                              : _secondaryColor.withValues(alpha: 0.3),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Beni hatırla',
                       style: TextStyle(
-                        color: Color(0xFF334155),
+                        color: isDark ? Colors.grey[300] : const Color(0xFF334155),
                         fontWeight: FontWeight.w500,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -323,12 +460,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     minimumSize: const Size(50, 30),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Şifremi unuttum',
                     style: TextStyle(
-                      color: Color(0xFF334155),
+                      color: isDark ? Colors.grey[300] : _accentColor,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -336,33 +473,34 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Giriş Butonu
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 54,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _girisYap,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF334155),
+                  backgroundColor: _accentColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
                 child: _isLoading
-                    ? const Row(
+                    ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
+                          const SizedBox(
+                            width: 22,
+                            height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(width: 12),
-                          Text(
+                          const SizedBox(width: 12),
+                          const Text(
                             'Giriş Yapılıyor...',
                             style: TextStyle(
                               fontSize: 16,
@@ -371,12 +509,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       )
-                    : const Text(
-                        'Giriş Yap →',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.login_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'GİRİŞ YAP',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
                       ),
               ),
             ),
@@ -386,82 +536,45 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
+  // ============================================================
+  // 🧪 TEST HESABI
+  // ============================================================
+  Widget _buildTestAccount(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : _secondaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : _secondaryColor.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            'assets/images/login-bg.png',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.deepOrange.shade900, Colors.orange.shade700],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 16,
             ),
           ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-            child: Container(
-              color: Colors.black.withOpacity(0.45),
-            ),
-          ),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth: 1152,
-                  minHeight: 680,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withOpacity(0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withOpacity(0.12),
-                      blurRadius: 50,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 24.0, sigmaY: 24.0),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isDesktop = constraints.maxWidth > 768;
-
-                        if (isDesktop) {
-                          return IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(child: _buildLeftPanel(true)),
-                                Expanded(child: _buildRightPanel(true)),
-                              ],
-                            ),
-                          );
-                        } else {
-                          return Column(
-                            children: [
-                              _buildLeftPanel(false),
-                              _buildRightPanel(false),
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
+          const SizedBox(width: 10),
+          Text(
+            'Test: admin / admin',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.grey[400] : _accentColor,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
