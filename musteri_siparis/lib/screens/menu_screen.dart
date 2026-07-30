@@ -1,9 +1,11 @@
+// lib/screens/menu_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/sepet_provider.dart';
 import '../models/sepet_item.dart';
 import '../models/urun.dart';
 import '../services/api_service.dart';
+import 'sepet_screen.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -33,7 +35,6 @@ class _MenuScreenState extends State<MenuScreen> {
     'İçecekler',
   ];
 
-  // 👇 ÜRÜN ADINA GÖRE LOCAL RESİM EŞLEŞTİRME (Backend'den resim gelmiyor)
   String _getResimDosyasi(String urunAdi) {
     final resimMap = {
       'Mercimek Çorbası': 'assets/images/mercimek_corbasi.jpg',
@@ -101,9 +102,7 @@ class _MenuScreenState extends State<MenuScreen> {
     });
 
     try {
-      final apiService = ApiService();
-      final urunler = await apiService.getUrunler();
-
+      final urunler = await ApiService.getUrunler();
       setState(() {
         _tumUrunler = urunler;
         _isLoading = false;
@@ -187,7 +186,10 @@ class _MenuScreenState extends State<MenuScreen> {
                   IconButton(
                     icon: const Icon(Icons.shopping_cart, color: Colors.white),
                     onPressed: () {
-                      _showSepetDialog(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SepetScreen()),
+                      );
                     },
                   ),
                   if (sepetProvider.sepet.isNotEmpty)
@@ -379,7 +381,6 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget _buildProductCard(Urun urun) {
     final sepetProvider = Provider.of<SepetProvider>(context, listen: false);
     final isFavori = sepetProvider.isFavori(urun.urunId);
-    // 👇 RESİM LOCAL'DEN
     final resimDosyasi = _getResimDosyasi(urun.urunAdi);
 
     return Container(
@@ -484,7 +485,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // 👇 FİYAT BACKEND'DEN
                     Text(
                       '₺${urun.fiyat.toStringAsFixed(2)}',
                       style: const TextStyle(
@@ -572,287 +572,5 @@ class _MenuScreenState extends State<MenuScreen> {
       default:
         return Icons.fastfood;
     }
-  }
-
-  // 👇 SİPARİŞ GÖNDER (BACKEND'E)
-  Future<void> _siparisGonder(BuildContext context) async {
-    final sepetProvider = Provider.of<SepetProvider>(context, listen: false);
-
-    if (sepetProvider.sepet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sepetiniz boş!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    try {
-      final apiService = ApiService();
-      final detaylar = sepetProvider.sepet.map((item) {
-        return {
-          'urunId': item.urun.urunId,
-          'urunAdi': item.urun.urunAdi,
-          'fiyat': item.urun.fiyat,
-          'adet': item.adet,
-          'aciklama': item.urun.aciklama ?? '',
-        };
-      }).toList();
-
-      final response = await apiService.siparisOlustur(
-        siparisTipi: 'Masa',
-        musteriAdi: 'Müşteri',
-        masaId: 1,
-        detaylar: detaylar,
-      );
-
-      if (context.mounted) {
-        sepetProvider.sepetiTemizle();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Siparişiniz başarıyla gönderildi!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Sipariş gönderilemedi: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showSepetDialog(BuildContext context) {
-    final sepetProvider = Provider.of<SepetProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          maxChildSize: 0.9,
-          minChildSize: 0.4,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  width: 35,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    '🛒 Sepetim',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Expanded(
-                  child: sepetProvider.sepet.isEmpty
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shopping_cart_outlined, size: 50, color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text('Sepetiniz boş', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          itemCount: sepetProvider.sepet.length,
-                          itemBuilder: (context, index) {
-                            final item = sepetProvider.sepet[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F0),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      _getCategoryIcon(item.urun.kategoriId),
-                                      color: const Color(0xFF2E7D32),
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.urun.urunAdi,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        Text(
-                                          '₺${item.urun.fiyat.toStringAsFixed(2)} x ${item.adet}',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                                        onPressed: () => sepetProvider.sepettenCikar(item),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        iconSize: 22,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        '${item.adet}',
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      IconButton(
-                                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2E7D32)),
-                                        onPressed: () => sepetProvider.sepeteEkle(
-                                          SepetItem(urun: item.urun, adet: 1),
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        iconSize: 22,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
-                if (sepetProvider.sepet.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, -3),
-                        ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Toplam:',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '₺${sepetProvider.toplamFiyat.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2E7D32),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    sepetProvider.sepetiTemizle();
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('🗑️ Sepet temizlendi'),
-                                        backgroundColor: Colors.grey,
-                                      ),
-                                    );
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.red),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                  ),
-                                  child: const Text(
-                                    'Temizle',
-                                    style: TextStyle(color: Colors.red, fontSize: 13),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 2,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    // 👇 SİPARİŞ GÖNDER
-                                    _siparisGonder(context);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2E7D32),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                  ),
-                                  child: const Text(
-                                    'Sipariş Ver',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
   }
 }

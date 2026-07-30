@@ -1,12 +1,13 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/sepet_provider.dart';
-import 'screens/menu_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (_) => SepetProvider(),
+      create: (context) => SepetProvider(),
       child: const MyApp(),
     ),
   );
@@ -18,15 +19,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Lezzet Durağı',
-      debugShowCheckedModeBanner: false,
+      title: 'Şeker Restoran',
       theme: ThemeData(
         primarySwatch: Colors.green,
         fontFamily: 'Roboto',
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF5F5F0),
       ),
-      home: const MenuScreen(),
+      debugShowCheckedModeBanner: false,
+      home: const LoginScreen(),
     );
   }
 }

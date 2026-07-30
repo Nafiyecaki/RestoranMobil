@@ -1,3 +1,4 @@
+// lib/screens/login_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
@@ -19,12 +20,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _beniHatirla = false;
   String? _errorMessage;
 
-  // 🎨 Şeker Restoran Logosundan Alınan Renkler
-  static const Color _primaryColor = Color(0xFFA67B5B);    // Altın kahve
-  static const Color _secondaryColor = Color(0xFFD4A574);  // Açık altın
-  static const Color _accentColor = Color(0xFF8B6B4D);     // Koyu kahve
-  static const Color _lightBg = Color(0xFFFDF8F3);         // Krem
-  static const Color _darkBg = Color(0xFF1A1410);          // Koyu
+  static const Color _primaryColor = Color(0xFFA67B5B);
+  static const Color _secondaryColor = Color(0xFFD4A574);
+  static const Color _accentColor = Color(0xFF8B6B4D);
+  static const Color _lightBg = Color(0xFFFDF8F3);
+  static const Color _darkBg = Color(0xFF1A1410);
 
   @override
   void dispose() {
@@ -98,28 +98,19 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.symmetric(
-                horizontal: size.width > 600 ? 40 : 20,
-                vertical: 20,
+                horizontal: size.width > 600 ? 60 : 24,
+                vertical: 24,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(height: size.height * 0.04),
-                  
-                  // ✅ LOGO - BURADA!
                   _buildLogo(size, isDark),
-                  
                   SizedBox(height: size.height * 0.04),
-                  
-                  // Form Kartı
                   _buildFormCard(isDark, size),
-                  
                   SizedBox(height: size.height * 0.03),
-                  
-                  // Test Hesabı
                   _buildTestAccount(isDark),
-                  
                   SizedBox(height: size.height * 0.04),
                 ],
               ),
@@ -130,17 +121,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ============================================================
-  // 🍽️ LOGO - Şeker Restoran (Attığın Logo)
-  // ============================================================
   Widget _buildLogo(Size size, bool isDark) {
-    double logoSize = size.width > 600 ? 120 : size.width * 0.3;
+    double logoSize = size.width > 600 ? 120 : size.width * 0.28;
     if (logoSize > 140) logoSize = 140;
     if (logoSize < 80) logoSize = 80;
 
     return Column(
       children: [
-        // Logo Container
         Container(
           width: logoSize,
           height: logoSize,
@@ -170,8 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
-        // Başlık
         Text(
           'Şeker Restoran',
           style: TextStyle(
@@ -202,21 +187,18 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ============================================================
-  // 📋 FORM KARTI
-  // ============================================================
   Widget _buildFormCard(bool isDark, Size size) {
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
-        maxWidth: size.width > 600 ? 400 : double.infinity,
+        maxWidth: size.width > 600 ? 420 : double.infinity,
       ),
-      padding: EdgeInsets.all(size.width > 600 ? 32 : 24),
+      padding: EdgeInsets.all(size.width > 600 ? 36 : 24),
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF2A1F18).withValues(alpha: 0.9)
             : Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.06)
@@ -237,7 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hata Mesajı
             if (_errorMessage != null)
               Container(
                 width: double.infinity,
@@ -252,26 +233,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 18,
-                    ),
+                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 13,
-                        ),
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
                     ),
                   ],
                 ),
               ),
 
-            // Kullanıcı Adı
             const Text(
               'Kullanıcı Adı',
               style: TextStyle(
@@ -336,7 +309,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Şifre
             const Text(
               'Şifre',
               style: TextStyle(
@@ -415,7 +387,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Beni Hatırla & Şifremi Unuttum
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -473,7 +444,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Giriş Butonu
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -488,10 +458,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   elevation: 0,
                 ),
                 child: _isLoading
-                    ? Row(
+                    ? const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
@@ -499,8 +469,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Text(
+                          SizedBox(width: 12),
+                          Text(
                             'Giriş Yapılıyor...',
                             style: TextStyle(
                               fontSize: 16,
@@ -512,11 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.login_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
+                          Icon(Icons.login_rounded, color: Colors.white, size: 22),
                           SizedBox(width: 10),
                           Text(
                             'GİRİŞ YAP',
@@ -536,9 +502,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ============================================================
-  // 🧪 TEST HESABI
-  // ============================================================
   Widget _buildTestAccount(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -562,11 +525,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.green.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 16,
-            ),
+            child: const Icon(Icons.check_circle, color: Colors.green, size: 16),
           ),
           const SizedBox(width: 10),
           Text(

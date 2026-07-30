@@ -1,7 +1,9 @@
+// lib/screens/sepet_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../providers/sepet_provider.dart';
+import '../models/sepet_item.dart';
 import '../services/api_service.dart';
 
 class SepetScreen extends StatefulWidget {
@@ -12,7 +14,6 @@ class SepetScreen extends StatefulWidget {
 }
 
 class _SepetScreenState extends State<SepetScreen> {
-  // ✅ DÜZELTİLDİ: ApiService _api = ApiService() kaldırıldı
   final _adController = TextEditingController();
   final _telController = TextEditingController();
   final _adresController = TextEditingController();
@@ -61,13 +62,12 @@ class _SepetScreenState extends State<SepetScreen> {
     setState(() => _gonderiliyor = true);
 
     try {
-      final detaylar = sepet.items.map((item) => {
+      final detaylar = sepet.sepet.map((item) => {
         'urunId': item.urun.urunId,
         'adet': item.adet,
         'detayNot': item.not,
       }).toList();
 
-      // ✅ DÜZELTİLDİ: _api.siparisOlustur() → ApiService.siparisOlustur()
       final result = await ApiService.siparisOlustur(
         siparisTipi: _seciliSiparisTipi,
         musteriAdi: _adController.text.trim(),
@@ -77,10 +77,10 @@ class _SepetScreenState extends State<SepetScreen> {
       );
 
       if (result['success'] == true) {
-        sepet.temizle();
+        sepet.sepetiTemizle();
         _showSnackBar('✅ Siparişiniz başarıyla alındı!', Colors.green);
         if (mounted) {
-          Navigator.popUntil(context, (route) => route.isFirst);
+          Navigator.pop(context);
         }
       } else {
         _showSnackBar(result['message'] ?? 'Sipariş oluşturulamadı', Colors.red);
@@ -109,7 +109,7 @@ class _SepetScreenState extends State<SepetScreen> {
     final sepet = context.watch<SepetProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final teslimatUcreti = _seciliSiparisTipi == 'SALON' ? 0.0 : 9.99;
-    final toplam = sepet.toplamTutar + teslimatUcreti;
+    final toplam = sepet.toplamFiyat + teslimatUcreti;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F5),
@@ -123,14 +123,14 @@ class _SepetScreenState extends State<SepetScreen> {
         foregroundColor: isDark ? Colors.white : Colors.black87,
         centerTitle: true,
         actions: [
-          if (sepet.items.isNotEmpty)
+          if (sepet.sepet.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
               onPressed: () => _showClearCartDialog(sepet),
             ),
         ],
       ),
-      body: sepet.items.isEmpty
+      body: sepet.sepet.isEmpty
           ? _buildEmptyCart(isDark)
           : _buildCartContent(sepet, isDark, toplam, teslimatUcreti),
     );
@@ -235,9 +235,9 @@ class _SepetScreenState extends State<SepetScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: sepet.items.length,
+            itemCount: sepet.sepet.length,
             itemBuilder: (context, index) {
-              final item = sepet.items[index];
+              final item = sepet.sepet[index];
               return _buildCartItem(item, sepet, isDark);
             },
           ),
@@ -248,7 +248,7 @@ class _SepetScreenState extends State<SepetScreen> {
     );
   }
 
-  Widget _buildCartItem(dynamic item, SepetProvider sepet, bool isDark) {
+  Widget _buildCartItem(SepetItem item, SepetProvider sepet, bool isDark) {
     return Card(
       elevation: 0,
       color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
@@ -325,7 +325,7 @@ class _SepetScreenState extends State<SepetScreen> {
                 children: [
                   _buildQuantityButton(
                     icon: Icons.remove,
-                    onTap: () => sepet.azalt(item.urun),
+                    onTap: () => sepet.sepettenCikar(item),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -340,7 +340,7 @@ class _SepetScreenState extends State<SepetScreen> {
                   ),
                   _buildQuantityButton(
                     icon: Icons.add,
-                    onTap: () => sepet.ekle(item.urun),
+                    onTap: () => sepet.sepeteEkle(SepetItem(urun: item.urun, adet: 1)),
                   ),
                 ],
               ),
@@ -424,7 +424,7 @@ class _SepetScreenState extends State<SepetScreen> {
             ),
             child: Column(
               children: [
-                _buildPriceRow('Ara Toplam', '₺${sepet.toplamTutar.toStringAsFixed(2)}'),
+                _buildPriceRow('Ara Toplam', '₺${sepet.toplamFiyat.toStringAsFixed(2)}'),
                 const SizedBox(height: 8),
                 _buildPriceRow('Teslimat Ücreti', teslimatUcreti == 0 ? 'Ücretsiz' : '₺${teslimatUcreti.toStringAsFixed(2)}'),
                 const Divider(height: 16, color: Colors.deepOrange),
@@ -626,7 +626,7 @@ class _SepetScreenState extends State<SepetScreen> {
           ),
           TextButton(
             onPressed: () {
-              sepet.temizle();
+              sepet.sepetiTemizle();
               Navigator.pop(context);
               _showSnackBar('🗑️ Sepet temizlendi', Colors.orange);
             },
