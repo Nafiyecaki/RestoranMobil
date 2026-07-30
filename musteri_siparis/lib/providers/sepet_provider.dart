@@ -1,41 +1,67 @@
-import 'package:flutter/foundation.dart';
-import '../models/urun.dart';
+import 'package:flutter/material.dart';
 import '../models/sepet_item.dart';
 
 class SepetProvider extends ChangeNotifier {
-  final List<SepetItem> _items = [];
+  List<SepetItem> _sepet = [];
+  List<int> _favoriler = [];
 
-  List<SepetItem> get items => _items;
+  List<SepetItem> get sepet => _sepet;
+  List<int> get favoriler => _favoriler;
 
-  double get toplamTutar =>
-      _items.fold(0, (sum, item) => sum + item.satirToplami);
+  double get toplamFiyat {
+    return _sepet.fold(0.0, (sum, item) => sum + item.satirToplami);
+  }
 
-  int get toplamAdet => _items.fold(0, (sum, item) => sum + item.adet);
+  int get toplamUrunSayisi {
+    return _sepet.fold(0, (sum, item) => sum + item.adet);
+  }
 
-  void ekle(Urun urun) {
-    final mevcut = _items.indexWhere((i) => i.urun.urunId == urun.urunId);
-    if (mevcut >= 0) {
-      _items[mevcut].adet++;
+  bool isFavori(int urunId) {
+    return _favoriler.contains(urunId);
+  }
+
+  void favoriEkleCikar(int urunId) {
+    if (_favoriler.contains(urunId)) {
+      _favoriler.remove(urunId);
     } else {
-      _items.add(SepetItem(urun: urun));
+      _favoriler.add(urunId);
     }
     notifyListeners();
   }
 
-  void azalt(Urun urun) {
-    final mevcut = _items.indexWhere((i) => i.urun.urunId == urun.urunId);
-    if (mevcut >= 0) {
-      if (_items[mevcut].adet > 1) {
-        _items[mevcut].adet--;
+  void sepeteEkle(SepetItem sepetItem) {
+    final mevcutIndex = _sepet.indexWhere(
+      (item) => item.urun.urunId == sepetItem.urun.urunId,
+    );
+    if (mevcutIndex != -1) {
+      _sepet[mevcutIndex].adet += sepetItem.adet;
+    } else {
+      _sepet.add(sepetItem);
+    }
+    notifyListeners();
+  }
+
+  void sepettenCikar(SepetItem sepetItem) {
+    final mevcutIndex = _sepet.indexWhere(
+      (item) => item.urun.urunId == sepetItem.urun.urunId,
+    );
+    if (mevcutIndex != -1) {
+      if (_sepet[mevcutIndex].adet > 1) {
+        _sepet[mevcutIndex].adet--;
       } else {
-        _items.removeAt(mevcut);
+        _sepet.removeAt(mevcutIndex);
       }
       notifyListeners();
     }
   }
 
-  void temizle() {
-    _items.clear();
+  void sepetiTemizle() {
+    _sepet.clear();
+    notifyListeners();
+  }
+
+  void urunSil(SepetItem sepetItem) {
+    _sepet.removeWhere((item) => item.urun.urunId == sepetItem.urun.urunId);
     notifyListeners();
   }
 }
