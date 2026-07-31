@@ -1,10 +1,10 @@
 // lib/screens/sepet_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import '../providers/sepet_provider.dart';
 import '../models/sepet_item.dart';
 import '../services/api_service.dart';
+import 'odeme_screen.dart'; // Ödeme ekranı eklendi
 
 class SepetScreen extends StatefulWidget {
   const SepetScreen({super.key});
@@ -45,7 +45,7 @@ class _SepetScreenState extends State<SepetScreen> {
     super.dispose();
   }
 
-  Future<void> _siparisVer(SepetProvider sepet) async {
+  Future<void> _siparisVer(SepetProvider sepet, double toplamTutar) async {
     if (_adController.text.trim().isEmpty) {
       _showSnackBar('Lütfen adınızı girin', Colors.orange);
       return;
@@ -59,6 +59,24 @@ class _SepetScreenState extends State<SepetScreen> {
       return;
     }
 
+    // EĞER KREDİ KARTI VEYA ONLINE ÖDEME SEÇİLİYSE ÖDEME EKRANINA YÖNLENDİR
+    if (_seciliOdemeTipi == 'KREDI_KARTI' || _seciliOdemeTipi == 'ONLINE') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OdemeScreen(
+            siparisTipi: _seciliSiparisTipi,
+            musteriAdi: _adController.text.trim(),
+            musteriTelefon: _telController.text.trim(),
+            musteriAdres: _adresGoster ? _adresController.text.trim() : null,
+            toplamTutar: toplamTutar,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // NAKİT ÖDEME İSE DİREKT APİ'YE GÖNDER
     setState(() => _gonderiliyor = true);
 
     try {
@@ -476,7 +494,7 @@ class _SepetScreenState extends State<SepetScreen> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _gonderiliyor ? null : () => _siparisVer(sepet),
+              onPressed: _gonderiliyor ? null : () => _siparisVer(sepet, toplam),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrange,
                 shape: RoundedRectangleBorder(
@@ -485,10 +503,10 @@ class _SepetScreenState extends State<SepetScreen> {
                 elevation: 0,
               ),
               child: _gonderiliyor
-                  ? Row(
+                  ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
@@ -496,8 +514,8 @@ class _SepetScreenState extends State<SepetScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        const Text(
+                        SizedBox(width: 12),
+                        Text(
                           'Sipariş Gönderiliyor...',
                           style: TextStyle(
                             color: Colors.white,
@@ -507,21 +525,28 @@ class _SepetScreenState extends State<SepetScreen> {
                         ),
                       ],
                     )
-                  : const Row(
+                  : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 8),
+                        Icon(
+                          (_seciliOdemeTipi == 'KREDI_KARTI' || _seciliOdemeTipi == 'ONLINE')
+                              ? Icons.credit_card
+                              : Icons.check_circle,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
                         Text(
-                          'SİPARİŞ VER',
-                          style: TextStyle(
+                          (_seciliOdemeTipi == 'KREDI_KARTI' || _seciliOdemeTipi == 'ONLINE')
+                              ? 'ÖDEMEYE GEÇ'
+                              : 'SİPARİŞ VER',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, color: Colors.white),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward, color: Colors.white),
                       ],
                     ),
             ),
