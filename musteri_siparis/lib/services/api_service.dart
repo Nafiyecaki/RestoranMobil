@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/urun.dart';
 import '../models/siparis.dart';
+import '../models/user_model.dart';
 
 class ApiService {
   // ============================================================
@@ -178,6 +179,301 @@ class ApiService {
         'success': false,
         'message': '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
       };
+    }
+  }
+
+  // ============================================================
+  // 👤 KULLANICI PROFİLİ
+  // ============================================================
+  static Future<User> getProfile() async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/uyeler/profil'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return User.fromJson(data);
+      } else {
+        throw Exception('Profil bilgileri alınamadı');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // 👤 PROFİL GÜNCELLE
+  // ============================================================
+  static Future<Map<String, dynamic>> updateProfile({
+    required String adi,
+    required String soyadi,
+    required String telefon,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/uyeler/profil'),
+        headers: headers,
+        body: jsonEncode({
+          'uyeAdi': adi,
+          'uyeSoyadi': soyadi,
+          'uyeTelefon': telefon,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message': '✅ Profil başarıyla güncellendi!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': '❌ Profil güncellenemedi!',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': '⚠️ Bağlantı hatası!',
+      };
+    }
+  }
+
+  // ============================================================
+  // 🔐 ŞİFRE DEĞİŞTİR
+  // ============================================================
+  static Future<Map<String, dynamic>> changePassword({
+    required String eskiSifre,
+    required String yeniSifre,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/sifre-degistir'),
+        headers: headers,
+        body: jsonEncode({
+          'eskiSifre': eskiSifre,
+          'yeniSifre': yeniSifre,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message': '✅ Şifre başarıyla değiştirildi!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': '❌ Şifre değiştirilemedi! Eski şifrenizi kontrol edin.',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': '⚠️ Bağlantı hatası!',
+      };
+    }
+  }
+
+  // ============================================================
+  // 📍 ADRESLERİ GETİR
+  // ============================================================
+  static Future<List<Address>> getAddresses() async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/uyeler/adresler'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((a) => Address.fromJson(a)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ============================================================
+  // 📍 ADRES EKLE
+  // ============================================================
+  static Future<Map<String, dynamic>> addAddress({
+    required String adresTipi,
+    required String acikAdres,
+    bool teslimatBolgesindeMi = false,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/uyeler/adresler'),
+        headers: headers,
+        body: jsonEncode({
+          'adresTipi': adresTipi,
+          'acikAdres': acikAdres,
+          'teslimatBolgesindeMi': teslimatBolgesindeMi,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message': '✅ Adres başarıyla eklendi!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': '❌ Adres eklenemedi!',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': '⚠️ Bağlantı hatası!',
+      };
+    }
+  }
+
+  // ============================================================
+  // 📍 ADRES SİL
+  // ============================================================
+  static Future<Map<String, dynamic>> deleteAddress(int adresId) async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/uyeler/adresler/$adresId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': '✅ Adres başarıyla silindi!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': '❌ Adres silinemedi!',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': '⚠️ Bağlantı hatası!',
+      };
+    }
+  }
+
+  // ============================================================
+  // 📋 KULLANICI SİPARİŞLERİ
+  // ============================================================
+  static Future<List<Map<String, dynamic>>> getMyOrders() async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/siparisler/benim-siparislerim'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ============================================================
+  // 📋 SİPARİŞ GEÇMİŞİ
+  // ============================================================
+  static Future<List<Map<String, dynamic>>> getOrderHistory() async {
+    try {
+      final token = await _getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/siparisler/gecmis'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
     }
   }
 
