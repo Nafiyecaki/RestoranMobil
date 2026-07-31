@@ -1,8 +1,7 @@
 // lib/screens/login_screen.dart
-import 'dart:ui';
-import 'dart:convert';  // ✅ EKLENDİ
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';  // ✅ EKLENDİ
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'menu_screen.dart';
 
@@ -46,23 +45,20 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      print('📤 Login isteği gönderiliyor: kullaniciAdi=${_kullaniciAdiController.text.trim()}');
-      
       final result = await ApiService.login(
         kullaniciAdi: _kullaniciAdiController.text.trim(),
         sifre: _sifreController.text,
       );
 
-      print('📥 Login yanıtı: $result');
-
       if (!mounted) return;
 
       if (result['success'] == true) {
         final data = result['data'] ?? {};
-        
+
         // 🔥 ROL BELİRLEME (Web'deki gibi)
-        String userRole = (data['rol'] ?? data['Rol'] ?? data['role'] ?? '').toLowerCase().trim();
-        print('🔍 Backend\'den gelen ham rol: $userRole');
+        String userRole = (data['rol'] ?? data['Rol'] ?? data['role'] ?? '')
+            .toLowerCase()
+            .trim();
 
         // 🔥 ROL EŞLEME
         final Map<String, String> roleMapping = {
@@ -94,62 +90,75 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final validRoles = ['admin', 'garson', 'asci', 'kurye', 'user'];
 
-        if (roleMapping.containsKey(userRole) && validRoles.contains(roleMapping[userRole])) {
+        if (roleMapping.containsKey(userRole) &&
+            validRoles.contains(roleMapping[userRole])) {
           userRole = roleMapping[userRole]!;
-          print('✅ Mapping ile rol bulundu: $userRole');
         } else {
-          final kullaniciAdiLower = _kullaniciAdiController.text.trim().toLowerCase();
-          
+          final kullaniciAdiLower = _kullaniciAdiController.text
+              .trim()
+              .toLowerCase();
+
           if (kullaniciAdiLower.contains('admin')) {
             userRole = 'admin';
-          } else if (kullaniciAdiLower.contains('garson') || kullaniciAdiLower.contains('waiter')) {
+          } else if (kullaniciAdiLower.contains('garson') ||
+              kullaniciAdiLower.contains('waiter')) {
             userRole = 'garson';
-          } else if (kullaniciAdiLower.contains('asci') || kullaniciAdiLower.contains('aşçı')) {
+          } else if (kullaniciAdiLower.contains('asci') ||
+              kullaniciAdiLower.contains('aşçı')) {
             userRole = 'asci';
-          } else if (kullaniciAdiLower.contains('kurye') || kullaniciAdiLower.contains('courier')) {
+          } else if (kullaniciAdiLower.contains('kurye') ||
+              kullaniciAdiLower.contains('courier')) {
             userRole = 'kurye';
           } else {
             userRole = 'user';
           }
-          print('✅ Fallback ile rol atandı: $userRole');
         }
-
-        print('✅ Sonuç - Kullanıcı rolü: $userRole');
 
         // 🔥 Kullanıcı bilgilerini kaydet
         final user = {
           'id': data['personelId'] ?? data['PersonelId'] ?? data['id'] ?? 0,
-          'name': data['adSoyad'] ?? data['AdSoyad'] ?? data['name'] ?? _kullaniciAdiController.text.trim(),
+          'name':
+              data['adSoyad'] ??
+              data['AdSoyad'] ??
+              data['name'] ??
+              _kullaniciAdiController.text.trim(),
           'email': data['email'] ?? _kullaniciAdiController.text.trim(),
           'role': userRole,
         };
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user', jsonEncode(user));  // ✅ jsonEncode çalışıyor
+        await prefs.setString(
+          'user',
+          jsonEncode(user),
+        ); // ✅ jsonEncode çalışıyor
 
         // 🔥 YÖNLENDİRME
+        if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MenuScreen()),
         );
-        
+
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Hoş geldiniz, ${user['name']}!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
-        
       } else {
         setState(() {
           _errorMessage = result['message'] ?? 'Giriş başarısız!';
         });
       }
     } catch (e) {
-      print('❌ Login hatası: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -242,6 +251,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     filterQuality: FilterQuality.high,
                     isAntiAlias: true,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: _secondaryColor.withValues(alpha: 0.2),
+                        child: const Icon(
+                          Icons.restaurant,
+                          size: 60,
+                          color: _accentColor,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -328,13 +347,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.red.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.2),
-                  ),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -369,10 +390,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintStyle: TextStyle(
                   color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
                 ),
-                prefixIcon: Icon(
-                  Icons.person_outline,
-                  color: _primaryColor,
-                ),
+                prefixIcon: Icon(Icons.person_outline, color: _primaryColor),
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: 16,
                   horizontal: 16,
@@ -395,10 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: _accentColor,
-                    width: 2,
-                  ),
+                  borderSide: BorderSide(color: _accentColor, width: 2),
                 ),
               ),
               validator: (value) {
@@ -434,10 +449,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintStyle: TextStyle(
                   color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
                 ),
-                prefixIcon: Icon(
-                  Icons.lock_outline,
-                  color: _primaryColor,
-                ),
+                prefixIcon: Icon(Icons.lock_outline, color: _primaryColor),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _showPassword
@@ -473,10 +485,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: _accentColor,
-                    width: 2,
-                  ),
+                  borderSide: BorderSide(color: _accentColor, width: 2),
                 ),
               ),
               validator: (value) {
@@ -488,10 +497,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
                       width: 22,
@@ -518,7 +531,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Beni hatırla',
                       style: TextStyle(
-                        color: isDark ? Colors.grey[300] : const Color(0xFF334155),
+                        color: isDark
+                            ? Colors.grey[300]
+                            : const Color(0xFF334155),
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
                       ),
@@ -583,7 +598,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.login_rounded, color: Colors.white, size: 22),
+                          Icon(
+                            Icons.login_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                           SizedBox(width: 10),
                           Text(
                             'GİRİŞ YAP',
@@ -626,7 +645,11 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.green.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.check_circle, color: Colors.green, size: 16),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 10),
           Text(

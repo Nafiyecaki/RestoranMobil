@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/urun.dart';
-import '../models/siparis.dart';
 import '../models/user_model.dart';
 
 class ApiService {
@@ -61,16 +60,13 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'kullaniciAdi': kullaniciAdi,
-          'sifre': sifre,
-        }),
+        body: jsonEncode({'kullaniciAdi': kullaniciAdi, 'sifre': sifre}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         final token = data['token'] ?? data['accessToken'] ?? '';
-        
+
         if (token.isNotEmpty) {
           await _saveToken(token);
           _userId = data['userId']?.toString() ?? data['id']?.toString();
@@ -79,12 +75,8 @@ class ApiService {
             await prefs.setString('user_id', _userId!);
           }
         }
-        
-        return {
-          'success': true,
-          'data': data,
-          'message': '✅ Giriş başarılı!',
-        };
+
+        return {'success': true, 'data': data, 'message': '✅ Giriş başarılı!'};
       } else {
         return {
           'success': false,
@@ -94,7 +86,8 @@ class ApiService {
     } catch (e) {
       return {
         'success': false,
-        'message': '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
       };
     }
   }
@@ -120,8 +113,36 @@ class ApiService {
         return [];
       }
     } catch (e) {
-      print('Ürünler yüklenirken hata: $e');
+      debugPrint('Ürünler yüklenirken hata: $e');
       return [];
+    }
+  }
+
+  // ============================================================
+  // 📦 KATEGORİYE GÖRE ÜRÜN GETİR
+  // ============================================================
+  static Future<List<Urun>> getUrunlerByKategoriId(int kategoriId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/urunler?kategoriId=$kategoriId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        if (decoded is List) {
+          final urunler = decoded.map((json) => Urun.fromJson(json)).toList();
+          return urunler.where((u) => u.kategoriId == kategoriId).toList();
+        }
+      }
+
+      // Sorgu endpoint'i desteklenmiyorsa tüm ürünlerden filtrele.
+      final tumUrunler = await getUrunler();
+      return tumUrunler.where((u) => u.kategoriId == kategoriId).toList();
+    } catch (e) {
+      debugPrint('Kategoriye göre ürünler yüklenirken hata: $e');
+      final tumUrunler = await getUrunler();
+      return tumUrunler.where((u) => u.kategoriId == kategoriId).toList();
     }
   }
 
@@ -138,10 +159,8 @@ class ApiService {
   }) async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
-      
+      final headers = {'Content-Type': 'application/json'};
+
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -177,7 +196,8 @@ class ApiService {
     } catch (e) {
       return {
         'success': false,
-        'message': '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
       };
     }
   }
@@ -188,9 +208,7 @@ class ApiService {
   static Future<User> getProfile() async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -221,9 +239,7 @@ class ApiService {
   }) async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -246,16 +262,10 @@ class ApiService {
           'message': '✅ Profil başarıyla güncellendi!',
         };
       } else {
-        return {
-          'success': false,
-          'message': '❌ Profil güncellenemedi!',
-        };
+        return {'success': false, 'message': '❌ Profil güncellenemedi!'};
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': '⚠️ Bağlantı hatası!',
-      };
+      return {'success': false, 'message': '⚠️ Bağlantı hatası!'};
     }
   }
 
@@ -268,9 +278,7 @@ class ApiService {
   }) async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -278,10 +286,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/sifre-degistir'),
         headers: headers,
-        body: jsonEncode({
-          'eskiSifre': eskiSifre,
-          'yeniSifre': yeniSifre,
-        }),
+        body: jsonEncode({'eskiSifre': eskiSifre, 'yeniSifre': yeniSifre}),
       );
 
       if (response.statusCode == 200) {
@@ -298,10 +303,7 @@ class ApiService {
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': '⚠️ Bağlantı hatası!',
-      };
+      return {'success': false, 'message': '⚠️ Bağlantı hatası!'};
     }
   }
 
@@ -311,9 +313,7 @@ class ApiService {
   static Future<List<Address>> getAddresses() async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -344,9 +344,7 @@ class ApiService {
   }) async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -369,16 +367,10 @@ class ApiService {
           'message': '✅ Adres başarıyla eklendi!',
         };
       } else {
-        return {
-          'success': false,
-          'message': '❌ Adres eklenemedi!',
-        };
+        return {'success': false, 'message': '❌ Adres eklenemedi!'};
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': '⚠️ Bağlantı hatası!',
-      };
+      return {'success': false, 'message': '⚠️ Bağlantı hatası!'};
     }
   }
 
@@ -388,9 +380,7 @@ class ApiService {
   static Future<Map<String, dynamic>> deleteAddress(int adresId) async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -401,21 +391,12 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': '✅ Adres başarıyla silindi!',
-        };
+        return {'success': true, 'message': '✅ Adres başarıyla silindi!'};
       } else {
-        return {
-          'success': false,
-          'message': '❌ Adres silinemedi!',
-        };
+        return {'success': false, 'message': '❌ Adres silinemedi!'};
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': '⚠️ Bağlantı hatası!',
-      };
+      return {'success': false, 'message': '⚠️ Bağlantı hatası!'};
     }
   }
 
@@ -425,9 +406,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyOrders() async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -454,9 +433,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getOrderHistory() async {
     try {
       final token = await _getToken();
-      final headers = {
-        'Content-Type': 'application/json',
-      };
+      final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }

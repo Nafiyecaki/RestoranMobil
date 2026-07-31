@@ -1,9 +1,10 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
+import '../widgets/app_bottom_nav.dart';
+import 'menu_screen.dart';
+import 'sepet_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -191,12 +192,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _onBottomNavTap(int index) {
+    if (index == 2) return;
+
+    if (index == 0) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MenuScreen()),
+      );
+      return;
+    }
+
+    if (index == 1) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SepetScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F0),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F0F)
+          : const Color(0xFFF5F5F0),
       appBar: AppBar(
         title: const Text(
           '👤 Profilim',
@@ -209,7 +231,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF2E7D32),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -223,8 +249,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: _isLoading
           ? _buildLoading()
           : _errorMessage != null
-              ? _buildError()
-              : _buildContent(isDark),
+          ? _buildError()
+          : _buildContent(isDark),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 2,
+        onTap: _onBottomNavTap,
+      ),
     );
   }
 
@@ -242,10 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: 16),
-          Text(
-            'Profil yükleniyor...',
-            style: TextStyle(color: Colors.grey),
-          ),
+          Text('Profil yükleniyor...', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
@@ -259,14 +286,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.08),
+              color: Colors.red.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 50,
-            ),
+            child: const Icon(Icons.error_outline, color: Colors.red, size: 50),
           ),
           const SizedBox(height: 16),
           Text(
@@ -323,8 +346,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -395,7 +418,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _user?.uyeEmail ?? '',
                             style: TextStyle(
                               fontSize: 13,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
                             ),
                           ),
                         ],
@@ -412,7 +437,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _user?.uyeTelefon ?? '',
                             style: TextStyle(
                               fontSize: 13,
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
                             ),
                           ),
                         ],
@@ -422,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withOpacity(0.1),
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
@@ -459,9 +486,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.person_outline, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -474,9 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.person_outline, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -490,9 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                 ),
                 keyboardType: TextInputType.phone,
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 16),
               Row(
@@ -543,11 +564,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : const Color(0xFF2E7D32).withOpacity(0.05),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : const Color(0xFF2E7D32).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -589,9 +613,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.lock_outline, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -605,9 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -621,9 +641,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 16),
               Row(
@@ -679,8 +697,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -716,7 +734,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2E7D32).withOpacity(0.1),
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -738,7 +756,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -756,13 +774,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.03)
-                      : Colors.grey.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.grey.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.grey.withOpacity(0.1),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.withValues(alpha: 0.1),
                   ),
                 ),
                 child: const Center(
@@ -773,70 +791,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._addresses.map((address) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
+              ..._addresses.map(
+                (address) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : const Color(0xFF2E7D32).withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.03)
-                          : const Color(0xFF2E7D32).withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.withOpacity(0.1),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.home,
+                          color: Color(0xFF2E7D32),
+                          size: 18,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E7D32).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.home,
-                            color: Color(0xFF2E7D32),
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                address.adresTipi,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                  fontSize: 14,
-                                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              address.adresTipi,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                                fontSize: 14,
                               ),
-                              Text(
-                                address.acikAdres,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              address.acikAdres,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                               ),
-                            ],
-                          ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          onPressed: () => _deleteAddress(address.adresId),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
                         ),
-                      ],
-                    ),
-                  )),
+                        onPressed: () => _deleteAddress(address.adresId),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (_showAddAddress) ...[
               const SizedBox(height: 12),
               TextField(
@@ -849,9 +871,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.label_outline, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -865,9 +885,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 12),
               Row(
@@ -936,8 +954,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -971,7 +989,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -991,13 +1009,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.03)
-                      : Colors.grey.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.grey.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.grey.withOpacity(0.1),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.withValues(alpha: 0.1),
                   ),
                 ),
                 child: const Center(
@@ -1008,72 +1026,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._orders.map((order) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
+              ..._orders.map(
+                (order) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : const Color(0xFF2E7D32).withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.03)
-                          : const Color(0xFF2E7D32).withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.withOpacity(0.1),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long,
+                          color: Color(0xFF2E7D32),
+                          size: 18,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E7D32).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.receipt_long,
-                            color: Color(0xFF2E7D32),
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '#${order['siparisId']}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                  fontSize: 14,
-                                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '#${order['siparisId']}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                                fontSize: 14,
                               ),
-                              Text(
-                                '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                ),
+                            ),
+                            Text(
+                              '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          order['siparisTarihi'] != null
-                              ? DateTime.parse(order['siparisTarihi'])
-                                  .toLocal()
-                                  .toString()
-                                  .split(' ')[0]
-                              : '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
-                          ),
+                      ),
+                      Text(
+                        order['siparisTarihi'] != null
+                            ? DateTime.parse(
+                                order['siparisTarihi'],
+                              ).toLocal().toString().split(' ')[0]
+                            : '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[500] : Colors.grey[500],
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1088,8 +1109,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1123,7 +1144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -1143,13 +1164,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.03)
-                      : Colors.grey.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.grey.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.grey.withOpacity(0.1),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.withValues(alpha: 0.1),
                   ),
                 ),
                 child: const Center(
@@ -1160,72 +1181,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._orderHistory.take(5).map((order) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.03)
-                          : Colors.grey.withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+              ..._orderHistory
+                  .take(5)
+                  .map(
+                    (order) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.withOpacity(0.1),
+                            ? Colors.white.withValues(alpha: 0.03)
+                            : Colors.grey.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.grey.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.history,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '#${order['siparisId']}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            order['siparisTarihi'] != null
+                                ? DateTime.parse(
+                                    order['siparisTarihi'],
+                                  ).toLocal().toString().split(' ')[0]
+                                : '',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey[500]
+                                  : Colors.grey[500],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.history,
-                            color: Colors.grey,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '#${order['siparisId']}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          order['siparisTarihi'] != null
-                              ? DateTime.parse(order['siparisTarihi'])
-                                  .toLocal()
-                                  .toString()
-                                  .split(' ')[0]
-                              : '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.grey[500] : Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
+                  ),
             if (_orderHistory.length > 5)
               Center(
                 child: TextButton(
@@ -1264,9 +1294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Çıkış Yap'),
                 ),
               ],
@@ -1283,10 +1311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         icon: const Icon(Icons.logout, size: 22),
         label: const Text(
           'Çıkış Yap',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,

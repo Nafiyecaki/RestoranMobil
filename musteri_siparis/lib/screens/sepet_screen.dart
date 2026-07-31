@@ -1,11 +1,12 @@
 // lib/screens/sepet_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import '../providers/sepet_provider.dart';
 import '../models/sepet_item.dart';
 import '../services/api_service.dart';
-import '../models/user_model.dart';
+import '../widgets/app_bottom_nav.dart';
+import 'menu_screen.dart';
+import 'profile_screen.dart';
 
 class SepetScreen extends StatefulWidget {
   const SepetScreen({super.key});
@@ -22,18 +23,24 @@ class _SepetScreenState extends State<SepetScreen> {
   bool _gonderiliyor = false;
   String _seciliSiparisTipi = 'PAKET_SERVIS';
   bool _isLoading = true;
-  User? _user;
-  String? _errorMessage;
 
   final List<Map<String, dynamic>> _siparisTipleri = [
-    {'value': 'PAKET_SERVIS', 'label': '📦 Paket Servis', 'icon': Icons.local_shipping},
+    {
+      'value': 'PAKET_SERVIS',
+      'label': '📦 Paket Servis',
+      'icon': Icons.local_shipping,
+    },
     {'value': 'GEL_AL', 'label': '🏃 Gel-Al', 'icon': Icons.directions_walk},
     {'value': 'SALON', 'label': '🍽️ Salonda Ye', 'icon': Icons.restaurant},
   ];
 
   final List<Map<String, dynamic>> _odemeTipleri = [
     {'value': 'NAKIT', 'label': '💵 Nakit', 'icon': Icons.money},
-    {'value': 'KREDI_KARTI', 'label': '💳 Kredi Kartı', 'icon': Icons.credit_card},
+    {
+      'value': 'KREDI_KARTI',
+      'label': '💳 Kredi Kartı',
+      'icon': Icons.credit_card,
+    },
     {'value': 'ONLINE', 'label': '📱 Online', 'icon': Icons.qr_code_scanner},
   ];
 
@@ -51,7 +58,6 @@ class _SepetScreenState extends State<SepetScreen> {
     try {
       final user = await ApiService.getProfile();
       setState(() {
-        _user = user;
         _adController.text = user.uyeAdi ?? '';
         _telController.text = user.uyeTelefon ?? '';
         if (user.adresler != null && user.adresler!.isNotEmpty) {
@@ -61,7 +67,6 @@ class _SepetScreenState extends State<SepetScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
         _isLoading = false;
       });
     }
@@ -93,11 +98,15 @@ class _SepetScreenState extends State<SepetScreen> {
     setState(() => _gonderiliyor = true);
 
     try {
-      final detaylar = sepet.sepet.map((item) => {
-        'urunId': item.urun.urunId,
-        'adet': item.adet,
-        'detayNot': item.not,
-      }).toList();
+      final detaylar = sepet.sepet
+          .map(
+            (item) => {
+              'urunId': item.urun.urunId,
+              'adet': item.adet,
+              'detayNot': item.not,
+            },
+          )
+          .toList();
 
       final result = await ApiService.siparisOlustur(
         siparisTipi: _seciliSiparisTipi,
@@ -114,10 +123,16 @@ class _SepetScreenState extends State<SepetScreen> {
           Navigator.pop(context);
         }
       } else {
-        _showSnackBar(result['message'] ?? 'Sipariş oluşturulamadı', Colors.red);
+        _showSnackBar(
+          result['message'] ?? 'Sipariş oluşturulamadı',
+          Colors.red,
+        );
       }
     } catch (e) {
-      _showSnackBar('❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}', Colors.red);
+      _showSnackBar(
+        '❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _gonderiliyor = false);
     }
@@ -135,6 +150,25 @@ class _SepetScreenState extends State<SepetScreen> {
     );
   }
 
+  void _onBottomNavTap(int index) {
+    if (index == 1) return;
+
+    if (index == 0) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MenuScreen()),
+      );
+      return;
+    }
+
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sepet = context.watch<SepetProvider>();
@@ -143,7 +177,9 @@ class _SepetScreenState extends State<SepetScreen> {
     final toplam = sepet.toplamFiyat + teslimatUcreti;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F0),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F0F)
+          : const Color(0xFFF5F5F0),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF2E7D32),
@@ -158,7 +194,11 @@ class _SepetScreenState extends State<SepetScreen> {
         foregroundColor: Colors.white,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -191,8 +231,12 @@ class _SepetScreenState extends State<SepetScreen> {
               ),
             )
           : sepet.sepet.isEmpty
-              ? _buildEmptyCart(isDark)
-              : _buildCartContent(sepet, isDark, toplam, teslimatUcreti),
+          ? _buildEmptyCart(isDark)
+          : _buildCartContent(sepet, isDark, toplam, teslimatUcreti),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 1,
+        onTap: _onBottomNavTap,
+      ),
     );
   }
 
@@ -254,7 +298,12 @@ class _SepetScreenState extends State<SepetScreen> {
     );
   }
 
-  Widget _buildCartContent(SepetProvider sepet, bool isDark, double toplam, double teslimatUcreti) {
+  Widget _buildCartContent(
+    SepetProvider sepet,
+    bool isDark,
+    double toplam,
+    double teslimatUcreti,
+  ) {
     return Column(
       children: [
         // 📋 Ürün Listesi
@@ -390,15 +439,12 @@ class _SepetScreenState extends State<SepetScreen> {
                   ),
                 ),
                 InkWell(
-                  onTap: () => sepet.sepeteEkle(SepetItem(urun: item.urun, adet: 1)),
+                  onTap: () =>
+                      sepet.sepeteEkle(SepetItem(urun: item.urun, adet: 1)),
                   borderRadius: BorderRadius.circular(8),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    child: Icon(
-                      Icons.add,
-                      size: 18,
-                      color: Color(0xFF2E7D32),
-                    ),
+                    child: Icon(Icons.add, size: 18, color: Color(0xFF2E7D32)),
                   ),
                 ),
               ],
@@ -409,7 +455,12 @@ class _SepetScreenState extends State<SepetScreen> {
     );
   }
 
-  Widget _buildPaymentSection(SepetProvider sepet, bool isDark, double toplam, double teslimatUcreti) {
+  Widget _buildPaymentSection(
+    SepetProvider sepet,
+    bool isDark,
+    double toplam,
+    double teslimatUcreti,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
@@ -501,7 +552,9 @@ class _SepetScreenState extends State<SepetScreen> {
                 const SizedBox(height: 8),
                 _buildPriceRow(
                   'Teslimat Ücreti',
-                  teslimatUcreti == 0 ? 'Ücretsiz' : '₺${teslimatUcreti.toStringAsFixed(2)}',
+                  teslimatUcreti == 0
+                      ? 'Ücretsiz'
+                      : '₺${teslimatUcreti.toStringAsFixed(2)}',
                   isDark: isDark,
                 ),
                 const Divider(height: 16),
@@ -550,7 +603,9 @@ class _SepetScreenState extends State<SepetScreen> {
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -655,9 +710,7 @@ class _SepetScreenState extends State<SepetScreen> {
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      style: TextStyle(
-        color: isDark ? Colors.white : Colors.black87,
-      ),
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -714,7 +767,9 @@ class _SepetScreenState extends State<SepetScreen> {
           style: TextStyle(
             fontSize: isBold ? 18 : 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? const Color(0xFF2E7D32) : (isDark ? Colors.white : Colors.black87),
+            color: isBold
+                ? const Color(0xFF2E7D32)
+                : (isDark ? Colors.white : Colors.black87),
           ),
         ),
       ],
@@ -726,7 +781,9 @@ class _SepetScreenState extends State<SepetScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sepeti Temizle'),
-        content: const Text('Sepetteki tüm ürünler kaldırılacak. Devam etmek istediğinize emin misiniz?'),
+        content: const Text(
+          'Sepetteki tüm ürünler kaldırılacak. Devam etmek istediğinize emin misiniz?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
