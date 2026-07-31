@@ -210,9 +210,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLogo(Size size, bool isDark) {
-    double logoSize = size.width > 600 ? 120 : size.width * 0.28;
-    if (logoSize > 140) logoSize = 140;
-    if (logoSize < 80) logoSize = 80;
+    double logoSize = size.width > 600 ? 140 : size.width * 0.34;
+    if (logoSize > 165) logoSize = 165;
+    if (logoSize < 96) logoSize = 96;
 
     return Column(
       children: [
@@ -229,19 +229,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 offset: const Offset(0, 10),
               ),
             ],
-            image: const DecorationImage(
-              image: AssetImage('assets/images/brand-logo.jpeg'),
-              fit: BoxFit.cover,
-            ),
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: _secondaryColor.withValues(alpha: 0.3),
-                width: 3,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipOval(
+                child: Transform.scale(
+                  scale: 1.15,
+                  child: Image.asset(
+                    'assets/images/login_logo_v2.png',
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    filterQuality: FilterQuality.high,
+                    isAntiAlias: true,
+                  ),
+                ),
               ),
-            ),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _secondaryColor.withValues(alpha: 0.3),
+                    width: 3,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
