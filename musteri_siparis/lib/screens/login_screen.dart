@@ -1,6 +1,8 @@
 // lib/screens/login_screen.dart
 import 'dart:ui';
+import 'dart:convert';  // ✅ EKLENDİ
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';  // ✅ EKLENDİ
 import '../services/api_service.dart';
 import 'menu_screen.dart';
 
@@ -44,24 +46,110 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      print('📤 Login isteği gönderiliyor: kullaniciAdi=${_kullaniciAdiController.text.trim()}');
+      
       final result = await ApiService.login(
         kullaniciAdi: _kullaniciAdiController.text.trim(),
         sifre: _sifreController.text,
       );
 
+      print('📥 Login yanıtı: $result');
+
       if (!mounted) return;
 
       if (result['success'] == true) {
+        final data = result['data'] ?? {};
+        
+        // 🔥 ROL BELİRLEME (Web'deki gibi)
+        String userRole = (data['rol'] ?? data['Rol'] ?? data['role'] ?? '').toLowerCase().trim();
+        print('🔍 Backend\'den gelen ham rol: $userRole');
+
+        // 🔥 ROL EŞLEME
+        final Map<String, String> roleMapping = {
+          'admin': 'admin',
+          'administrator': 'admin',
+          'yönetici': 'admin',
+          'yonetici': 'admin',
+          'superadmin': 'admin',
+          'garson': 'garson',
+          'waiter': 'garson',
+          'servis': 'garson',
+          'komi': 'garson',
+          'aşçı': 'asci',
+          'asci': 'asci',
+          'asçı': 'asci',
+          'ascı': 'asci',
+          'cook': 'asci',
+          'chef': 'asci',
+          'mutfak': 'asci',
+          'şef': 'asci',
+          'kurye': 'kurye',
+          'courier': 'kurye',
+          'delivery': 'kurye',
+          'müşteri': 'user',
+          'musteri': 'user',
+          'customer': 'user',
+          'user': 'user',
+        };
+
+        final validRoles = ['admin', 'garson', 'asci', 'kurye', 'user'];
+
+        if (roleMapping.containsKey(userRole) && validRoles.contains(roleMapping[userRole])) {
+          userRole = roleMapping[userRole]!;
+          print('✅ Mapping ile rol bulundu: $userRole');
+        } else {
+          final kullaniciAdiLower = _kullaniciAdiController.text.trim().toLowerCase();
+          
+          if (kullaniciAdiLower.contains('admin')) {
+            userRole = 'admin';
+          } else if (kullaniciAdiLower.contains('garson') || kullaniciAdiLower.contains('waiter')) {
+            userRole = 'garson';
+          } else if (kullaniciAdiLower.contains('asci') || kullaniciAdiLower.contains('aşçı')) {
+            userRole = 'asci';
+          } else if (kullaniciAdiLower.contains('kurye') || kullaniciAdiLower.contains('courier')) {
+            userRole = 'kurye';
+          } else {
+            userRole = 'user';
+          }
+          print('✅ Fallback ile rol atandı: $userRole');
+        }
+
+        print('✅ Sonuç - Kullanıcı rolü: $userRole');
+
+        // 🔥 Kullanıcı bilgilerini kaydet
+        final user = {
+          'id': data['personelId'] ?? data['PersonelId'] ?? data['id'] ?? 0,
+          'name': data['adSoyad'] ?? data['AdSoyad'] ?? data['name'] ?? _kullaniciAdiController.text.trim(),
+          'email': data['email'] ?? _kullaniciAdiController.text.trim(),
+          'role': userRole,
+        };
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', jsonEncode(user));  // ✅ jsonEncode çalışıyor
+
+        // 🔥 YÖNLENDİRME
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MenuScreen()),
         );
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Hoş geldiniz, ${user['name']}!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        
       } else {
         setState(() {
           _errorMessage = result['message'] ?? 'Giriş başarısız!';
         });
       }
     } catch (e) {
+      print('❌ Login hatası: $e');
       if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
