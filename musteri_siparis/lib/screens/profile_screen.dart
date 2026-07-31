@@ -1,6 +1,7 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 
@@ -43,6 +44,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadProfileData();
   }
 
+  @override
+  void dispose() {
+    _adiController.dispose();
+    _soyadiController.dispose();
+    _telefonController.dispose();
+    _eskiSifreController.dispose();
+    _yeniSifreController.dispose();
+    _yeniSifreTekrarController.dispose();
+    _adresTipiController.dispose();
+    _acikAdresController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadProfileData() async {
     setState(() {
       _isLoading = true;
@@ -62,7 +76,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _orderHistory = history;
         _isLoading = false;
 
-        // Controller'ları doldur
         _adiController.text = user.uyeAdi ?? '';
         _soyadiController.text = user.uyeSoyadi ?? '';
         _telefonController.text = user.uyeTelefon ?? '';
@@ -180,17 +193,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F0),
+      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F0),
       appBar: AppBar(
         title: const Text(
           '👤 Profilim',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         backgroundColor: const Color(0xFF2E7D32),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -199,82 +218,156 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: _loadProfileData,
           ),
         ],
+        centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Color(0xFF2E7D32)),
-                  SizedBox(height: 16),
-                  Text('Profil yükleniyor...'),
-                ],
-              ),
-            )
+          ? _buildLoading()
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 50),
-                      const SizedBox(height: 16),
-                      Text(_errorMessage!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadProfileData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                        ),
-                        child: const Text('Tekrar Dene'),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      // Profil Kartı
-                      _buildProfileCard(),
-                      const SizedBox(height: 16),
-
-                      // Adresler
-                      _buildAddressSection(),
-                      const SizedBox(height: 16),
-
-                      // Siparişler
-                      _buildOrdersSection(),
-                      const SizedBox(height: 16),
-
-                      // Sipariş Geçmişi
-                      _buildOrderHistorySection(),
-                      const SizedBox(height: 16),
-
-                      // Çıkış Butonu
-                      _buildLogoutButton(),
-                    ],
-                  ),
-                ),
+              ? _buildError()
+              : _buildContent(isDark),
     );
   }
 
-  Widget _buildProfileCard() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
+  Widget _buildLoading() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              color: Color(0xFF2E7D32),
+              strokeWidth: 3,
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Profil yükleniyor...',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 50,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage!,
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadProfileData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Tekrar Dene'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(bool isDark) {
+    return RefreshIndicator(
+      onRefresh: _loadProfileData,
+      color: const Color(0xFF2E7D32),
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
+            _buildProfileCard(isDark),
+            const SizedBox(height: 16),
+            _buildAddressSection(isDark),
+            const SizedBox(height: 16),
+            _buildOrdersSection(isDark),
+            const SizedBox(height: 16),
+            _buildOrderHistorySection(isDark),
+            const SizedBox(height: 16),
+            _buildLogoutButton(isDark),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Profil Başlığı
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFF2E7D32),
-                  child: Text(
-                    _user?.uyeAdi?.substring(0, 1).toUpperCase() ?? '?',
-                    style: const TextStyle(fontSize: 24, color: Colors.white),
-                  ),
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 35,
+                      backgroundColor: const Color(0xFF2E7D32),
+                      child: Text(
+                        _user?.uyeAdi?.substring(0, 1).toUpperCase() ?? '?',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -283,70 +376,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         _user?.tamAdi ?? 'İsimsiz',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
-                      Text(
-                        _user?.uyeEmail ?? '',
-                        style: TextStyle(color: Colors.grey[600]),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.email_outlined,
+                            size: 14,
+                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _user?.uyeEmail ?? '',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        _user?.uyeTelefon ?? '',
-                        style: TextStyle(color: Colors.grey[600]),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 14,
+                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _user?.uyeTelefon ?? '',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    _isEditing ? Icons.close : Icons.edit,
-                    color: const Color(0xFF2E7D32),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = !_isEditing;
-                      if (!_isEditing) {
-                        _adiController.text = _user?.uyeAdi ?? '';
-                        _soyadiController.text = _user?.uyeSoyadi ?? '';
-                        _telefonController.text = _user?.uyeTelefon ?? '';
-                      }
-                    });
-                  },
+                  child: IconButton(
+                    icon: Icon(
+                      _isEditing ? Icons.close : Icons.edit_outlined,
+                      color: const Color(0xFF2E7D32),
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isEditing = !_isEditing;
+                        if (!_isEditing) {
+                          _adiController.text = _user?.uyeAdi ?? '';
+                          _soyadiController.text = _user?.uyeSoyadi ?? '';
+                          _telefonController.text = _user?.uyeTelefon ?? '';
+                        }
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
             if (_isEditing) ...[
+              const SizedBox(height: 16),
               const Divider(),
+              const SizedBox(height: 8),
               TextField(
                 controller: _adiController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Ad',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.person_outline, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _soyadiController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Soyad',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.person_outline, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _telefonController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Telefon',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                 ),
                 keyboardType: TextInputType.phone,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -359,16 +507,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _telefonController.text = _user?.uyeTelefon ?? '';
                         });
                       },
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                       child: const Text('Vazgeç'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _updateProfile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Kaydet'),
                     ),
@@ -379,48 +537,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Divider(),
             // Şifre Değiştir
             if (!_showPasswordChange)
-              TextButton.icon(
-                onPressed: () {
+              InkWell(
+                onTap: () {
                   setState(() => _showPasswordChange = true);
                 },
-                icon: const Icon(Icons.lock_outline, color: Color(0xFF2E7D32)),
-                label: const Text(
-                  'Şifre Değiştir',
-                  style: TextStyle(color: Color(0xFF2E7D32)),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : const Color(0xFF2E7D32).withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_outline,
+                        color: Color(0xFF2E7D32),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Şifre Değiştir',
+                        style: TextStyle(
+                          color: const Color(0xFF2E7D32),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.grey,
+                        size: 16,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             if (_showPasswordChange) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _eskiSifreController,
                 obscureText: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Eski Şifre',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _yeniSifreController,
                 obscureText: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Yeni Şifre',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _yeniSifreTekrarController,
                 obscureText: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Yeni Şifre Tekrar',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -433,16 +638,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _yeniSifreTekrarController.clear();
                         });
                       },
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                       child: const Text('Vazgeç'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _changePassword,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Değiştir'),
                     ),
@@ -456,37 +671,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAddressSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildAddressSection(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '📍 Adreslerim',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      color: Color(0xFF2E7D32),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Adreslerim',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_addresses.length}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                    _showAddAddress ? Icons.close : Icons.add_location,
-                    color: const Color(0xFF2E7D32),
-                  ),
-                  onPressed: () {
+                InkWell(
+                  onTap: () {
                     setState(() => _showAddAddress = !_showAddAddress);
                   },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _showAddAddress ? Icons.close : Icons.add,
+                      color: const Color(0xFF2E7D32),
+                      size: 20,
+                    ),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
             if (_addresses.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.03)
+                      : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+                child: const Center(
                   child: Text(
                     'Kayıtlı adresiniz yok',
                     style: TextStyle(color: Colors.grey),
@@ -494,36 +773,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._addresses.map((address) => ListTile(
-                    leading: const Icon(Icons.home, color: Color(0xFF2E7D32)),
-                    title: Text(address.adresTipi),
-                    subtitle: Text(address.acikAdres),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => _deleteAddress(address.adresId),
+              ..._addresses.map((address) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.03)
+                          : const Color(0xFF2E7D32).withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.home,
+                            color: Color(0xFF2E7D32),
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                address.adresTipi,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                address.acikAdres,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          onPressed: () => _deleteAddress(address.adresId),
+                        ),
+                      ],
                     ),
                   )),
             if (_showAddAddress) ...[
-              const Divider(),
+              const SizedBox(height: 12),
               TextField(
                 controller: _adresTipiController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Adres Tipi (Ev, İş, vb.)',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.label_outline, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _acikAdresController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Adres',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                ),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Checkbox(
@@ -536,6 +882,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text('Teslimat bölgesinde mi?'),
                 ],
               ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -548,16 +895,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _teslimatBolgesindeMi = false;
                         });
                       },
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                       child: const Text('Vazgeç'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _addAddress,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Ekle'),
                     ),
@@ -571,24 +928,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildOrdersSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildOrdersSection(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '📋 Aktif Siparişlerim',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Icon(
+                  Icons.receipt_long_outlined,
+                  color: Color(0xFF2E7D32),
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Aktif Siparişlerim',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                if (_orders.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_orders.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (_orders.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.03)
+                      : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+                child: const Center(
                   child: Text(
                     'Aktif siparişiniz yok',
                     style: TextStyle(color: Colors.grey),
@@ -596,17 +1008,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._orders.map((order) => ListTile(
-                    leading: const Icon(Icons.receipt_long, color: Color(0xFF2E7D32)),
-                    title: Text('#${order['siparisId']}'),
-                    subtitle: Text(
-                      '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+              ..._orders.map((order) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.03)
+                          : const Color(0xFF2E7D32).withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.1),
+                      ),
                     ),
-                    trailing: Text(
-                      order['siparisTarihi'] != null
-                          ? DateTime.parse(order['siparisTarihi']).toLocal().toString().split(' ')[0]
-                          : '',
-                      style: TextStyle(color: Colors.grey[600]),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.receipt_long,
+                            color: Color(0xFF2E7D32),
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '#${order['siparisId']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          order['siparisTarihi'] != null
+                              ? DateTime.parse(order['siparisTarihi'])
+                                  .toLocal()
+                                  .toString()
+                                  .split(' ')[0]
+                              : '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                   )),
           ],
@@ -615,24 +1080,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildOrderHistorySection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildOrderHistorySection(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '📜 Sipariş Geçmişim',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Icon(
+                  Icons.history_outlined,
+                  color: Color(0xFF2E7D32),
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Sipariş Geçmişim',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                if (_orderHistory.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_orderHistory.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (_orderHistory.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.03)
+                      : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+                child: const Center(
                   child: Text(
                     'Geçmiş siparişiniz yok',
                     style: TextStyle(color: Colors.grey),
@@ -640,25 +1160,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else
-              ..._orderHistory.take(5).map((order) => ListTile(
-                    leading: const Icon(Icons.history, color: Colors.grey),
-                    title: Text('#${order['siparisId']}'),
-                    subtitle: Text(
-                      '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+              ..._orderHistory.take(5).map((order) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.03)
+                          : Colors.grey.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.1),
+                      ),
                     ),
-                    trailing: Text(
-                      order['siparisTarihi'] != null
-                          ? DateTime.parse(order['siparisTarihi']).toLocal().toString().split(' ')[0]
-                          : '',
-                      style: TextStyle(color: Colors.grey[600]),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.history,
+                            color: Colors.grey,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '#${order['siparisId']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                '${order['toplamTutar']} ₺ - ${order['siparisDurumu']}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          order['siparisTarihi'] != null
+                              ? DateTime.parse(order['siparisTarihi'])
+                                  .toLocal()
+                                  .toString()
+                                  .split(' ')[0]
+                              : '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[500] : Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                   )),
             if (_orderHistory.length > 5)
-              TextButton(
-                onPressed: () {
-                  // Tüm geçmişi göster
-                },
-                child: const Text('Tümünü Gör'),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    // Tüm geçmişi göster
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF2E7D32),
+                  ),
+                  child: const Text('Tümünü Gör'),
+                ),
               ),
           ],
         ),
@@ -666,25 +1244,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLogoutButton() {
+  Widget _buildLogoutButton(bool isDark) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () async {
-          await ApiService.logout();
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, '/login');
+          final shouldLogout = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Çıkış Yap'),
+              content: const Text('Çıkış yapmak istediğinize emin misiniz?'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Vazgeç'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Çıkış Yap'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldLogout == true) {
+            await ApiService.logout();
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/login');
+            }
           }
         },
-        icon: const Icon(Icons.logout),
-        label: const Text('Çıkış Yap'),
+        icon: const Icon(Icons.logout, size: 22),
+        label: const Text(
+          'Çıkış Yap',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
+          elevation: 0,
         ),
       ),
     );
