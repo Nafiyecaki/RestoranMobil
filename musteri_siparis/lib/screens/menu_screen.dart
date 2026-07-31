@@ -6,6 +6,7 @@ import '../models/sepet_item.dart';
 import '../models/urun.dart';
 import '../services/api_service.dart';
 import 'sepet_screen.dart';
+import 'profile_screen.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -162,6 +163,308 @@ class _MenuScreenState extends State<MenuScreen> {
     super.dispose();
   }
 
+  // ============================================================
+  // 🛒 SEPETE EKLEME BOTTOM SHEET
+  // ============================================================
+  void _showAddToCartBottomSheet(Urun urun) {
+    final sepetProvider = Provider.of<SepetProvider>(context, listen: false);
+    final TextEditingController _notController = TextEditingController();
+    int _adet = 1;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Üst çizgi
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Ürün Bilgisi
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.green.withOpacity(0.1),
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(urun.kategoriId),
+                            size: 30,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                urun.urunAdi,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '₺${urun.fiyat.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 24),
+
+                  // Adet Seçici
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Adet:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(0xFF2E7D32),
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  if (_adet > 1) {
+                                    setState(() => _adet--);
+                                  }
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  child: Icon(
+                                    Icons.remove,
+                                    color: Color(0xFF2E7D32),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 40,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$_adet',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  setState(() => _adet++);
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: Color(0xFF2E7D32),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Not Alanı
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      controller: _notController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Özel not ekle (isteğe bağlı)',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF2E7D32),
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(14),
+                        prefixIcon: Icon(
+                          Icons.note_add_outlined,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Butonlar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.grey),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Vazgeç',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final not = _notController.text.trim();
+                              final sepetItem = SepetItem(
+                                urun: urun,
+                                adet: _adet,
+                                not: not.isNotEmpty ? not : null,
+                              );
+                              sepetProvider.sepeteEkle(sepetItem);
+
+                              Navigator.pop(context);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${urun.urunAdi} sepete eklendi ✅',
+                                  ),
+                                  backgroundColor: const Color(0xFF2E7D32),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.add_shopping_cart, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Sepete Ekle (₺${(urun.fiyat * _adet).toStringAsFixed(2)})',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,6 +482,21 @@ class _MenuScreenState extends State<MenuScreen> {
         elevation: 0,
         centerTitle: true,
         actions: [
+          // ============================================================
+          // 👤 PROFİL BUTONU (YENİ)
+          // ============================================================
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          // ============================================================
+          // 🛒 SEPET BUTONU
+          // ============================================================
           Consumer<SepetProvider>(
             builder: (context, sepetProvider, child) {
               return Stack(
@@ -269,7 +587,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               padding: const EdgeInsets.all(12),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                childAspectRatio: 0.75,
+                                childAspectRatio: 0.7,
                                 crossAxisSpacing: 10,
                                 mainAxisSpacing: 10,
                               ),
@@ -402,6 +720,7 @@ class _MenuScreenState extends State<MenuScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Resim ve favori butonu
           Stack(
             children: [
               ClipRRect(
@@ -410,7 +729,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   topRight: Radius.circular(16),
                 ),
                 child: Container(
-                  height: 150,
+                  height: 120,
                   width: double.infinity,
                   color: Colors.green.withOpacity(0.08),
                   child: Image.asset(
@@ -449,15 +768,17 @@ class _MenuScreenState extends State<MenuScreen> {
                     child: Icon(
                       isFavori ? Icons.favorite : Icons.favorite_border,
                       color: isFavori ? Colors.red : Colors.grey[500],
-                      size: 18,
+                      size: 16,
                     ),
                   ),
                 ),
               ),
             ],
           ),
+
+          // Ürün bilgileri
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -471,75 +792,48 @@ class _MenuScreenState extends State<MenuScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   urun.aciklama ?? '',
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 10,
                     color: Colors.grey[600],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       '₺${urun.fiyat.toStringAsFixed(2)}',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2E7D32),
                       ),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Colors.grey),
-                          onPressed: () {
-                            final mevcut = sepetProvider.sepet.firstWhere(
-                              (item) => item.urun.urunId == urun.urunId,
-                              orElse: () => SepetItem(urun: urun, adet: 0),
-                            );
-                            if (mevcut.adet > 0) sepetProvider.sepettenCikar(mevcut);
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          iconSize: 18,
+                    // ✅ SEPETE EKLE BUTONU
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddToCartBottomSheet(urun),
+                      icon: const Icon(Icons.add_shopping_cart, size: 16),
+                      label: const Text(
+                        'Ekle',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        const SizedBox(width: 2),
-                        Consumer<SepetProvider>(
-                          builder: (context, provider, child) {
-                            final sepetItem = provider.sepet.firstWhere(
-                              (item) => item.urun.urunId == urun.urunId,
-                              orElse: () => SepetItem(urun: urun, adet: 0),
-                            );
-                            return Text(
-                              '${sepetItem.adet}',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                            );
-                          },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(width: 2),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2E7D32)),
-                          onPressed: () {
-                            final sepetItem = SepetItem(urun: urun, adet: 1);
-                            sepetProvider.sepeteEkle(sepetItem);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${urun.urunAdi} sepete eklendi ✅'),
-                                backgroundColor: const Color(0xFF2E7D32),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          iconSize: 18,
-                        ),
-                      ],
+                        minimumSize: const Size(60, 32),
+                      ),
                     ),
                   ],
                 ),
