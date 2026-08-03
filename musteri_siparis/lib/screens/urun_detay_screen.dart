@@ -183,15 +183,6 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
     for (final ekUrun in _seciliEkUrunler) {
       sepetProvider.sepeteEkle(SepetItem(urun: ekUrun, adet: 1));
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${urun.urunAdi} ve ${_seciliEkUrunler.length} yan ürün sepete eklendi',
-        ),
-        backgroundColor: const Color(0xFF2E7D32),
-      ),
-    );
   }
 
   Widget _buildOpsiyonBolumu({
@@ -554,7 +545,10 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () => _sepeteEkle(urun),
+                              onPressed: () {
+                                _sepeteEkle(urun);
+                                Navigator.pop(context, true);
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2E7D32),
                                 foregroundColor: Colors.white,

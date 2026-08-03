@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/sepet_item.dart';
 
 class SepetProvider extends ChangeNotifier {
-  List<SepetItem> _sepet = [];
-  List<int> _favoriler = [];
+  final List<SepetItem> _sepet = [];
+  final List<int> _favoriler = [];
 
   List<SepetItem> get sepet => _sepet;
   List<int> get favoriler => _favoriler;

@@ -5,8 +5,9 @@ import 'package:provider/provider.dart';
 import '../providers/sepet_provider.dart';
 import '../models/sepet_item.dart';
 import '../services/api_service.dart';
-import '../models/user_model.dart';  // ✅ User model import
+import '../models/user_model.dart'; // ✅ User model import
 import '../widgets/app_bottom_nav.dart';
+import 'odeme_screen.dart';
 import 'menu_screen.dart';
 import 'profile_screen.dart';
 
@@ -18,7 +19,7 @@ class SepetScreen extends StatefulWidget {
 }
 
 class _SepetScreenState extends State<SepetScreen> {
-  User? _user;  // ✅ Kullanıcı için
+  User? _user; // ✅ Kullanıcı için
   final _adController = TextEditingController();
   final _telController = TextEditingController();
   final _adresController = TextEditingController();
@@ -101,7 +102,7 @@ class _SepetScreenState extends State<SepetScreen> {
     try {
       final user = await ApiService.getProfile();
       setState(() {
-        _user = user;  // ✅ Kullanıcıyı kaydet
+        _user = user; // ✅ Kullanıcıyı kaydet
         _adController.text = user.uyeAdi ?? '';
         _telController.text = user.uyeTelefon ?? '';
         if (user.adresler != null && user.adresler!.isNotEmpty) {
@@ -137,14 +138,39 @@ class _SepetScreenState extends State<SepetScreen> {
       return;
     }
 
+    if (_seciliOdemeTipi == 'ONLINE' || _seciliOdemeTipi == 'KREDI_KARTI') {
+      final teslimatUcreti = _seciliSiparisTipi == 'SALON' ? 0.0 : 9.99;
+      final toplamTutar = sepet.toplamFiyat + teslimatUcreti;
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OdemeScreen(
+            siparisTipi: _seciliSiparisTipi,
+            musteriAdi: _adController.text.trim(),
+            musteriTelefon: _telController.text.trim(),
+            musteriAdres: _adresGoster ? _adresController.text.trim() : null,
+            toplamTutar: toplamTutar,
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _gonderiliyor = true);
 
     try {
-      final detaylar = sepet.sepet.map((item) => ({
-        'urunId': item.urun.urunId,
-        'adet': item.adet,
-        'detayNot': item.not,
-      })).toList();
+      final detaylar = sepet.sepet
+          .map(
+            (item) => ({
+              'urunId': item.urun.urunId,
+              'adet': item.adet,
+              'detayNot': item.not,
+            }),
+          )
+          .toList();
 
       // ✅ UyeId'yi gönder
       final result = await ApiService.siparisOlustur(
@@ -152,7 +178,7 @@ class _SepetScreenState extends State<SepetScreen> {
         musteriAdi: _adController.text.trim(),
         musteriTelefon: _telController.text.trim(),
         musteriAdres: _adresGoster ? _adresController.text.trim() : null,
-        uyeId: _user?.uyeId,  // ✅ Kullanıcı ID'si gönderiliyor
+        uyeId: _user?.uyeId, // ✅ Kullanıcı ID'si gönderiliyor
         detaylar: detaylar,
       );
 
@@ -163,10 +189,16 @@ class _SepetScreenState extends State<SepetScreen> {
           Navigator.pop(context);
         }
       } else {
-        _showSnackBar(result['message'] ?? 'Sipariş oluşturulamadı', Colors.red);
+        _showSnackBar(
+          result['message'] ?? 'Sipariş oluşturulamadı',
+          Colors.red,
+        );
       }
     } catch (e) {
-      _showSnackBar('❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}', Colors.red);
+      _showSnackBar(
+        '❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _gonderiliyor = false);
     }
@@ -209,18 +241,26 @@ class _SepetScreenState extends State<SepetScreen> {
     final toplam = sepet.toplamFiyat + teslimatUcreti;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F0),
+      backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF2E7D32),
         title: const Text(
           '🛒 Sepetim',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         foregroundColor: Colors.white,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -234,144 +274,151 @@ class _SepetScreenState extends State<SepetScreen> {
       body: _isLoading
           ? _buildLoading()
           : sepet.sepet.isEmpty
-              ? _buildEmptyCart(isDark)
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      ...sepet.sepet.map((item) => _buildCartItem(item, sepet, isDark)),
-                      const SizedBox(height: 16),
-                      _buildDropdownRow(
-                        icon: Icons.local_shipping,
-                        label: 'Sipariş Tipi',
-                        value: _seciliSiparisTipi,
-                        items: _siparisTipleri,
-                        onChanged: (value) {
-                          setState(() {
-                            _seciliSiparisTipi = value!;
-                            _adresGoster = value != 'SALON';
-                          });
-                        },
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildTextField(
-                        controller: _adController,
-                        icon: Icons.person,
-                        label: 'Adınız Soyadınız',
-                        hint: 'Ahmet Yılmaz',
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildTextField(
-                        controller: _telController,
-                        icon: Icons.phone,
-                        label: 'Telefon Numarası',
-                        hint: '555 123 45 67',
-                        keyboardType: TextInputType.phone,
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 10),
-                      if (_adresGoster)
-                        _buildTextField(
-                          controller: _adresController,
-                          icon: Icons.location_on,
-                          label: 'Teslimat Adresi',
-                          hint: 'Mahalle, Sokak, Apartman No',
-                          maxLines: 2,
-                          isDark: isDark,
-                        ),
-                      const SizedBox(height: 10),
-                      _buildTextField(
-                        controller: _notController,
-                        icon: Icons.note,
-                        label: 'Sipariş Notu (Opsiyonel)',
-                        hint: 'Kapı zili çalışmıyor, arayın...',
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPaymentSummary(sepet, isDark, toplam, teslimatUcreti),
-                      const SizedBox(height: 16),
-                      _buildDropdownRow(
-                        icon: Icons.payment,
-                        label: 'Ödeme Tipi',
-                        value: _seciliOdemeTipi,
-                        items: [
-                          {'value': 'NAKIT', 'label': '💵 Nakit'},
-                          {'value': 'KREDI_KARTI', 'label': '💳 Kredi Kartı'},
-                          {'value': 'ONLINE', 'label': '📱 Online'},
-                        ],
-                        onChanged: (value) => setState(() => _seciliOdemeTipi = value!),
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: _gonderiliyor ? null : () => _siparisVer(sepet),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E7D32),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: _gonderiliyor
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text(
-                                      'Sipariş Gönderiliyor...',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.check_circle, color: Colors.white),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'SİPARİŞ VER',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Icon(Icons.arrow_forward, color: Colors.white),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Siparişiniz onaylandıktan sonra hazırlanacaktır.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.grey[500] : Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
+          ? _buildEmptyCart(isDark)
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  ...sepet.sepet.map(
+                    (item) => _buildCartItem(item, sepet, isDark),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  _buildDropdownRow(
+                    icon: Icons.local_shipping,
+                    label: 'Sipariş Tipi',
+                    value: _seciliSiparisTipi,
+                    items: _siparisTipleri,
+                    onChanged: (value) {
+                      setState(() {
+                        _seciliSiparisTipi = value!;
+                        _adresGoster = value != 'SALON';
+                      });
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    controller: _adController,
+                    icon: Icons.person,
+                    label: 'Adınız Soyadınız',
+                    hint: 'Ahmet Yılmaz',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildTextField(
+                    controller: _telController,
+                    icon: Icons.phone,
+                    label: 'Telefon Numarası',
+                    hint: '555 123 45 67',
+                    keyboardType: TextInputType.phone,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  if (_adresGoster)
+                    _buildTextField(
+                      controller: _adresController,
+                      icon: Icons.location_on,
+                      label: 'Teslimat Adresi',
+                      hint: 'Mahalle, Sokak, Apartman No',
+                      maxLines: 2,
+                      isDark: isDark,
+                    ),
+                  const SizedBox(height: 10),
+                  _buildTextField(
+                    controller: _notController,
+                    icon: Icons.note,
+                    label: 'Sipariş Notu (Opsiyonel)',
+                    hint: 'Kapı zili çalışmıyor, arayın...',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPaymentSummary(sepet, isDark, toplam, teslimatUcreti),
+                  const SizedBox(height: 16),
+                  _buildDropdownRow(
+                    icon: Icons.payment,
+                    label: 'Ödeme Tipi',
+                    value: _seciliOdemeTipi,
+                    items: [
+                      {'value': 'NAKIT', 'label': '💵 Nakit'},
+                      {'value': 'KREDI_KARTI', 'label': '💳 Kredi Kartı'},
+                      {'value': 'ONLINE', 'label': '📱 Online'},
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _seciliOdemeTipi = value!),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _gonderiliyor
+                          ? null
+                          : () => _siparisVer(sepet),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _gonderiliyor
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Sipariş Gönderiliyor...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'SİPARİŞ VER',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, color: Colors.white),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Siparişiniz onaylandıktan sonra hazırlanacaktır.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey[500] : Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 1,
         onTap: _onBottomNavTap,
@@ -408,13 +455,17 @@ class _SepetScreenState extends State<SepetScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFFFF3E0),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : const Color(0xFFFFF3E0),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.shopping_cart_outlined,
               size: 56,
-              color: isDark ? Colors.grey[600] : Colors.deepOrange.withValues(alpha: 0.5),
+              color: isDark
+                  ? Colors.grey[600]
+                  : Colors.deepOrange.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
@@ -443,7 +494,9 @@ class _SepetScreenState extends State<SepetScreen> {
               backgroundColor: const Color(0xFF2E7D32),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -459,11 +512,15 @@ class _SepetScreenState extends State<SepetScreen> {
         color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.withValues(alpha: 0.12),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.grey.withValues(alpha: 0.12),
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -488,7 +545,11 @@ class _SepetScreenState extends State<SepetScreen> {
                       colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
                     ),
                   ),
-                  child: const Icon(Icons.fastfood, size: 30, color: Colors.deepOrange),
+                  child: const Icon(
+                    Icons.fastfood,
+                    size: 30,
+                    color: Colors.deepOrange,
+                  ),
                 );
               },
             ),
@@ -520,7 +581,10 @@ class _SepetScreenState extends State<SepetScreen> {
                 if (item.not?.isNotEmpty ?? false)
                   Text(
                     '📝 ${item.not}',
-                    style: TextStyle(fontSize: 10, color: isDark ? Colors.grey[500] : Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -529,7 +593,9 @@ class _SepetScreenState extends State<SepetScreen> {
           ),
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+              border: Border.all(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+              ),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -540,7 +606,11 @@ class _SepetScreenState extends State<SepetScreen> {
                   borderRadius: BorderRadius.circular(6),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Icon(Icons.remove, size: 16, color: Color(0xFF2E7D32)),
+                    child: Icon(
+                      Icons.remove,
+                      size: 16,
+                      color: Color(0xFF2E7D32),
+                    ),
                   ),
                 ),
                 Container(
@@ -555,7 +625,8 @@ class _SepetScreenState extends State<SepetScreen> {
                   ),
                 ),
                 InkWell(
-                  onTap: () => sepet.sepeteEkle(SepetItem(urun: item.urun, adet: 1)),
+                  onTap: () =>
+                      sepet.sepeteEkle(SepetItem(urun: item.urun, adet: 1)),
                   borderRadius: BorderRadius.circular(6),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -644,7 +715,9 @@ class _SepetScreenState extends State<SepetScreen> {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.2),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.2),
           ),
         ),
         focusedBorder: OutlineInputBorder(
@@ -652,16 +725,25 @@ class _SepetScreenState extends State<SepetScreen> {
           borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
         ),
         filled: true,
-        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.04),
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.04),
       ),
     );
   }
 
-  Widget _buildPaymentSummary(SepetProvider sepet, bool isDark, double toplam, double teslimatUcreti) {
+  Widget _buildPaymentSummary(
+    SepetProvider sepet,
+    bool isDark,
+    double toplam,
+    double teslimatUcreti,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFFFF8F0),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : const Color(0xFFFFF8F0),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
@@ -669,21 +751,37 @@ class _SepetScreenState extends State<SepetScreen> {
       ),
       child: Column(
         children: [
-          _buildPriceRow('Ara Toplam', '₺${sepet.toplamFiyat.toStringAsFixed(2)}', isDark: isDark),
+          _buildPriceRow(
+            'Ara Toplam',
+            '₺${sepet.toplamFiyat.toStringAsFixed(2)}',
+            isDark: isDark,
+          ),
           const SizedBox(height: 8),
           _buildPriceRow(
             'Teslimat Ücreti',
-            teslimatUcreti == 0 ? 'Ücretsiz' : '₺${teslimatUcreti.toStringAsFixed(2)}',
+            teslimatUcreti == 0
+                ? 'Ücretsiz'
+                : '₺${teslimatUcreti.toStringAsFixed(2)}',
             isDark: isDark,
           ),
           const Divider(height: 16),
-          _buildPriceRow('Toplam', '₺${toplam.toStringAsFixed(2)}', isBold: true, isDark: isDark),
+          _buildPriceRow(
+            'Toplam',
+            '₺${toplam.toStringAsFixed(2)}',
+            isBold: true,
+            isDark: isDark,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPriceRow(String label, String value, {bool isBold = false, required bool isDark}) {
+  Widget _buildPriceRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    required bool isDark,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -700,7 +798,9 @@ class _SepetScreenState extends State<SepetScreen> {
           style: TextStyle(
             fontSize: isBold ? 18 : 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? const Color(0xFF2E7D32) : (isDark ? Colors.white : Colors.black87),
+            color: isBold
+                ? const Color(0xFF2E7D32)
+                : (isDark ? Colors.white : Colors.black87),
           ),
         ),
       ],
@@ -712,7 +812,9 @@ class _SepetScreenState extends State<SepetScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sepeti Temizle'),
-        content: const Text('Sepetteki tüm ürünler kaldırılacak. Devam etmek istediğinize emin misiniz?'),
+        content: const Text(
+          'Sepetteki tüm ürünler kaldırılacak. Devam etmek istediğinize emin misiniz?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
