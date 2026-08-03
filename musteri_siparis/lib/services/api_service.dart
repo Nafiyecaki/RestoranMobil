@@ -13,13 +13,13 @@ class ApiService {
   // ============================================================
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:5141/api';
+      return 'http://localhost:5000/api';
     } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:5141/api';
+      return 'http://10.0.2.2:5000/api';
     } else if (Platform.isIOS) {
-      return 'http://localhost:5141/api';
+      return 'http://localhost:5000/api';
     } else {
-      return 'http://localhost:5141/api';
+      return 'http://localhost:5000/api';
     }
   }
 
@@ -149,58 +149,60 @@ class ApiService {
   // ============================================================
   // 🛒 SİPARİŞ OLUŞTUR
   // ============================================================
-  static Future<Map<String, dynamic>> siparisOlustur({
-    required String siparisTipi,
-    String? musteriAdi,
-    String? musteriTelefon,
-    String? musteriAdres,
-    int? masaId,
-    required List<Map<String, dynamic>> detaylar,
-  }) async {
-    try {
-      final token = await _getToken();
-      final headers = {'Content-Type': 'application/json'};
 
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+static Future<Map<String, dynamic>> siparisOlustur({
+  required String siparisTipi,
+  String? musteriAdi,
+  String? musteriTelefon,
+  String? musteriAdres,
+  int? masaId,
+  int? uyeId,  // ✅ YENİ: UyeId eklendi
+  required List<Map<String, dynamic>> detaylar,
+}) async {
+  try {
+    final token = await _getToken();
+    final headers = {'Content-Type': 'application/json'};
 
-      final body = jsonEncode({
-        'siparisTipi': siparisTipi,
-        'musteriAdi': musteriAdi,
-        'musteriTelefon': musteriTelefon,
-        'musteriAdres': musteriAdres,
-        'masaId': masaId,
-        'detaylar': detaylar,
-      });
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/siparisler'),
-        headers: headers,
-        body: body,
-      );
+    final body = jsonEncode({
+      'siparisTipi': siparisTipi,
+      'musteriAdi': musteriAdi,
+      'musteriTelefon': musteriTelefon,
+      'musteriAdres': musteriAdres,
+      'masaId': masaId,
+      'uyeId': uyeId,  // ✅ UyeId gönderiliyor
+      'detaylar': detaylar,
+    });
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return {
-          'success': true,
-          'data': data,
-          'message': '✅ Sipariş başarıyla oluşturuldu!',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': '❌ Sipariş oluşturulamadı! Lütfen tekrar deneyin.',
-        };
-      }
-    } catch (e) {
+    final response = await http.post(
+      Uri.parse('$baseUrl/siparisler'),
+      headers: headers,
+      body: body,
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return {
+        'success': true,
+        'data': data,
+        'message': '✅ Sipariş başarıyla oluşturuldu!',
+      };
+    } else {
       return {
         'success': false,
-        'message':
-            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+        'message': '❌ Sipariş oluşturulamadı! Lütfen tekrar deneyin.',
       };
     }
+  } catch (e) {
+    return {
+      'success': false,
+      'message': '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+    };
   }
+}
 
   // ============================================================
   // 👤 KULLANICI PROFİLİ
