@@ -21,11 +21,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _beniHatirla = false;
   String? _errorMessage;
 
-  static const Color _primaryColor = Color(0xFFA67B5B);
-  static const Color _secondaryColor = Color(0xFFD4A574);
-  static const Color _accentColor = Color(0xFF8B6B4D);
-  static const Color _lightBg = Color(0xFFFDF8F3);
-  static const Color _darkBg = Color(0xFF1A1410);
+  static const Color _primaryColor = Color(0xFF2E7D32);
+  static const Color _secondaryColor = Color(0xFF66BB6A);
+  static const Color _accentColor = Color(0xFF1B5E20);
 
   @override
   void dispose() {
@@ -172,6 +170,43 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _misafirGiris() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final user = {
+        'id': 0,
+        'name': 'Misafir',
+        'email': 'guest@local',
+        'role': 'user',
+      };
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user', jsonEncode(user));
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MenuScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Misafir girişi yapılamadı';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -181,15 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [_darkBg, const Color(0xFF2A1F18)]
-                : [_lightBg, const Color(0xFFF5EDE6)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -202,13 +229,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: size.height * 0.04),
+                  SizedBox(height: size.height * 0.025),
                   _buildLogo(size, isDark),
-                  SizedBox(height: size.height * 0.04),
+                  SizedBox(height: size.height * 0.025),
                   _buildFormCard(isDark, size),
-                  SizedBox(height: size.height * 0.03),
-                  _buildTestAccount(isDark),
-                  SizedBox(height: size.height * 0.04),
+                  SizedBox(height: size.height * 0.025),
                 ],
               ),
             ),
@@ -233,47 +258,31 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: _primaryColor.withValues(alpha: 0.25),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
+                color: _primaryColor.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ClipOval(
-                child: Transform.scale(
-                  scale: 1.15,
-                  child: Image.asset(
-                    'assets/images/login_logo_v2.png',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    filterQuality: FilterQuality.high,
-                    isAntiAlias: true,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: _secondaryColor.withValues(alpha: 0.2),
-                        child: const Icon(
-                          Icons.restaurant,
-                          size: 60,
-                          color: _accentColor,
-                        ),
-                      );
-                    },
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/Logo.png',
+              width: logoSize,
+              height: logoSize,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: _secondaryColor.withValues(alpha: 0.2),
+                  child: const Icon(
+                    Icons.restaurant,
+                    size: 60,
+                    color: _accentColor,
                   ),
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _secondaryColor.withValues(alpha: 0.3),
-                    width: 3,
-                  ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -284,23 +293,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : _accentColor,
             letterSpacing: 1.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: _secondaryColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'Yönetim Paneli',
-            style: TextStyle(
-              fontSize: size.width > 600 ? 14 : 12,
-              color: isDark ? Colors.grey[400] : _primaryColor,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 2,
-            ),
           ),
         ),
       ],
@@ -317,20 +309,20 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF2A1F18).withValues(alpha: 0.9)
-            : Colors.white.withValues(alpha: 0.85),
+            : const Color(0xFFFAFDF9),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.06)
-              : _secondaryColor.withValues(alpha: 0.15),
+              : _secondaryColor.withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
             color: isDark
                 ? Colors.black.withValues(alpha: 0.4)
-                : _primaryColor.withValues(alpha: 0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 10),
+                : _primaryColor.withValues(alpha: 0.12),
+            blurRadius: 50,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -379,20 +371,21 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _kullaniciAdiController,
               style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
               ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: isDark
                     ? Colors.white.withValues(alpha: 0.05)
-                    : const Color(0xFFFDF8F3),
+                    : const Color(0xFFF7FCF7),
                 hintText: 'kullanıcı adınız',
                 hintStyle: TextStyle(
-                  color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
+                  color: isDark ? Colors.grey[500] : const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
                 ),
                 prefixIcon: Icon(Icons.person_outline, color: _primaryColor),
                 contentPadding: const EdgeInsets.symmetric(
-                  vertical: 16,
+                  vertical: 18,
                   horizontal: 16,
                 ),
                 border: OutlineInputBorder(
@@ -400,7 +393,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderSide: BorderSide(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.1)
-                        : _secondaryColor.withValues(alpha: 0.2),
+                        : _secondaryColor.withValues(alpha: 0.45),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -408,12 +401,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderSide: BorderSide(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.1)
-                        : _secondaryColor.withValues(alpha: 0.2),
+                        : _secondaryColor.withValues(alpha: 0.45),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: _accentColor, width: 2),
+                  borderSide: BorderSide(color: _primaryColor, width: 2),
                 ),
               ),
               validator: (value) {
@@ -438,16 +431,17 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _sifreController,
               obscureText: !_showPassword,
               style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
               ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: isDark
                     ? Colors.white.withValues(alpha: 0.05)
-                    : const Color(0xFFFDF8F3),
+                    : const Color(0xFFF7FCF7),
                 hintText: '••••••••',
                 hintStyle: TextStyle(
-                  color: isDark ? Colors.grey[600] : const Color(0xFF94A3B8),
+                  color: isDark ? Colors.grey[500] : const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
                 ),
                 prefixIcon: Icon(Icons.lock_outline, color: _primaryColor),
                 suffixIcon: IconButton(
@@ -464,7 +458,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                  vertical: 16,
+                  vertical: 18,
                   horizontal: 16,
                 ),
                 border: OutlineInputBorder(
@@ -472,7 +466,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderSide: BorderSide(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.1)
-                        : _secondaryColor.withValues(alpha: 0.2),
+                        : _secondaryColor.withValues(alpha: 0.45),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -480,12 +474,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderSide: BorderSide(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.1)
-                        : _secondaryColor.withValues(alpha: 0.2),
+                        : _secondaryColor.withValues(alpha: 0.45),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: _accentColor, width: 2),
+                  borderSide: BorderSide(color: _primaryColor, width: 2),
                 ),
               ),
               validator: (value) {
@@ -507,8 +501,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      width: 22,
-                      height: 22,
+                      width: 20,
+                      height: 20,
                       child: Checkbox(
                         value: _beniHatirla,
                         onChanged: (val) {
@@ -516,7 +510,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _beniHatirla = val ?? false;
                           });
                         },
-                        activeColor: _accentColor,
+                        activeColor: _primaryColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -566,12 +560,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _girisYap,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _accentColor,
+                  backgroundColor: _primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  elevation: 0,
+                  elevation: 3,
+                  shadowColor: _primaryColor.withValues(alpha: 0.4),
                 ),
                 child: _isLoading
                     ? const Row(
@@ -616,51 +611,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _misafirGiris,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: _secondaryColor.withValues(alpha: 0.6),
+                  ),
+                  foregroundColor: _accentColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.person_outline),
+                label: const Text(
+                  'Misafir Girişi',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTestAccount(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : _secondaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : _secondaryColor.withValues(alpha: 0.15),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            'Test: admin / admin',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.grey[400] : _accentColor,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }
