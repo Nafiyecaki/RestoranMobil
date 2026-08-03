@@ -519,14 +519,14 @@ class _MenuScreenState extends State<MenuScreen> {
         titleSpacing: 16,
         title: Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/Logo.png',
+                width: 34,
+                height: 34,
+                fit: BoxFit.cover,
               ),
-              child: const Icon(Icons.spa, color: Color(0xFF2E7D32), size: 22),
             ),
             const SizedBox(width: 10),
             const Text(
