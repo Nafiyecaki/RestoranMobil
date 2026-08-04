@@ -49,6 +49,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isRefreshing = false;
   bool _isLoggingOut = false;
   bool _showPasswordChange = false;
+  bool _isChangingPassword = false;
+  bool _obscureEskiSifre = true;
+  bool _obscureYeniSifre = true;
+  bool _obscureYeniSifreTekrar = true;
   bool _emailVerified = false;
   bool _phoneVerified = false;
   String? _avatarBase64;
@@ -58,7 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final List<Map<String, dynamic>> _orders = [];
   final List<Map<String, dynamic>> _orderHistory = [];
   List<Urun> _tumUrunler = [];
-  List<Map<String, String>> _whoWeAreMembers = [
+  // Ekip sabittir; artık bu ekrandan düzenlenmiyor (bkz. ProfileWhoWeAreScreen).
+  static const List<Map<String, String>> _whoWeAreMembers = [
     {'name': 'Ekip Üyesi 1', 'role': 'Mobil Uygulama Geliştirme'},
     {'name': 'Ekip Üyesi 2', 'role': 'Backend ve API Entegrasyonu'},
     {'name': 'Ekip Üyesi 3', 'role': 'UI/UX Tasarım'},
@@ -109,7 +114,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final currentUser = await ApiService.getCurrentUser();
       final userId =
           currentUser?['userId']?.toString() ?? profile.uyeId.toString();
-      final whoWeAreRaw = prefs.getString('who_we_are_$userId');
 
       final activeOrders = orders.where((order) {
         final durum = (order['siparisDurumu'] ?? '').toString().toLowerCase();
@@ -133,21 +137,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _avatarBase64 = prefs.getString('avatar_$userId');
         _emailVerified = prefs.getBool('email_verified_$userId') ?? false;
         _phoneVerified = prefs.getBool('phone_verified_$userId') ?? false;
-        if (whoWeAreRaw != null && whoWeAreRaw.isNotEmpty) {
-          final decoded = jsonDecode(whoWeAreRaw);
-          if (decoded is List) {
-            _whoWeAreMembers = decoded
-                .whereType<Map>()
-                .map(
-                  (item) => {
-                    'name': item['name']?.toString() ?? '',
-                    'role': item['role']?.toString() ?? '',
-                  },
-                )
-                .where((item) => item['name']!.isNotEmpty)
-                .toList();
-          }
-        }
         _isLoading = false;
         _isRefreshing = false;
       });
@@ -210,16 +199,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.setString('$keyPrefix$userId', value);
   }
 
-  Future<void> _saveWhoWeAreMembers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentUser = await ApiService.getCurrentUser();
-    final userId =
-        currentUser?['userId']?.toString() ??
-        _user?.uyeId.toString() ??
-        'guest';
-    await prefs.setString('who_we_are_$userId', jsonEncode(_whoWeAreMembers));
-  }
-
   Future<void> _openEditProfilePage() async {
     if (_user == null) return;
 
@@ -244,22 +223,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _openWhoWeArePage() async {
-    final updatedMembers = await Navigator.push<List<Map<String, String>>>(
+    await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ProfileWhoWeAreScreen(initialMembers: _whoWeAreMembers),
-      ),
+      MaterialPageRoute(builder: (_) => const ProfileWhoWeAreScreen()),
     );
-
-    if (updatedMembers == null) return;
-
-    setState(() {
-      _whoWeAreMembers = updatedMembers;
-    });
-    await _saveWhoWeAreMembers();
   }
 
   Future<void> _changePassword() async {
+    if (_isChangingPassword) return;
+
     if (_yeniSifreController.text != _yeniSifreTekrarController.text) {
       _showSnackBar('❌ Yeni şifreler eşleşmiyor', Colors.red);
       return;
@@ -270,6 +242,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showSnackBar('❌ Lütfen tüm şifre alanlarını doldurun', Colors.orange);
       return;
     }
+
+    if (_yeniSifreController.text.length < 6) {
+      _showSnackBar('❌ Yeni şifre en az 6 karakter olmalı', Colors.orange);
+      return;
+    }
+
+    setState(() => _isChangingPassword = true);
 
     try {
       final result = await ApiService.changePassword(
@@ -282,15 +261,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result['success'] == true) {
         setState(() {
           _showPasswordChange = false;
+          _isChangingPassword = false;
         });
         _eskiSifreController.clear();
         _yeniSifreController.clear();
         _yeniSifreTekrarController.clear();
         _showSnackBar('✅ Şifre değiştirildi', Colors.green);
       } else {
+        setState(() => _isChangingPassword = false);
         _showSnackBar(result['message'] ?? 'Şifre değiştirilemedi', Colors.red);
       }
     } catch (e) {
+      if (!mounted) return;
+      setState(() => _isChangingPassword = false);
       _showSnackBar('❌ Şifre değiştirilirken hata oluştu: $e', Colors.red);
     }
   }
@@ -843,6 +826,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: _primaryColor,
               icon: Icons.shield_outlined,
             ),
+            trailing: AnimatedRotation(
+              turns: _showPasswordChange ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.expand_more_rounded,
+                color: Colors.grey.shade500,
+              ),
+            ),
             onTap: () {
               setState(() => _showPasswordChange = !_showPasswordChange);
             },
@@ -887,73 +878,142 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _showSnackBar('✅ Telefon doğrulandı', Colors.green);
             },
           ),
-          if (_showPasswordChange) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _eskiSifreController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Eski Şifre',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.lock_outline, size: 20),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _yeniSifreController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Yeni Şifre',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _yeniSifreTekrarController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Yeni Şifre Tekrar',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.lock_open_outlined, size: 20),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showPasswordChange = false;
-                      });
-                      _eskiSifreController.clear();
-                      _yeniSifreController.clear();
-                      _yeniSifreTekrarController.clear();
-                    },
-                    child: const Text('Vazgeç'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _changePassword,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryColor,
-                      foregroundColor: Colors.white,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: !_showPasswordChange
+                ? const SizedBox(width: double.infinity)
+                : Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _primaryColor.withValues(alpha: 0.12),
+                      ),
                     ),
-                    child: const Text('Değiştir'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Yeni şifre en az 6 karakter olmalı',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _passwordField(
+                          controller: _eskiSifreController,
+                          label: 'Eski Şifre',
+                          icon: Icons.lock_outline,
+                          obscure: _obscureEskiSifre,
+                          onToggle: () => setState(
+                            () => _obscureEskiSifre = !_obscureEskiSifre,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _passwordField(
+                          controller: _yeniSifreController,
+                          label: 'Yeni Şifre',
+                          icon: Icons.lock_open_outlined,
+                          obscure: _obscureYeniSifre,
+                          onToggle: () => setState(
+                            () => _obscureYeniSifre = !_obscureYeniSifre,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _passwordField(
+                          controller: _yeniSifreTekrarController,
+                          label: 'Yeni Şifre Tekrar',
+                          icon: Icons.lock_open_outlined,
+                          obscure: _obscureYeniSifreTekrar,
+                          onToggle: () => setState(
+                            () => _obscureYeniSifreTekrar =
+                                !_obscureYeniSifreTekrar,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isChangingPassword
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _showPasswordChange = false;
+                                        });
+                                        _eskiSifreController.clear();
+                                        _yeniSifreController.clear();
+                                        _yeniSifreTekrarController.clear();
+                                      },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 13,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text('Vazgeç'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isChangingPassword
+                                    ? null
+                                    : _changePassword,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _primaryColor,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: _primaryColor
+                                      .withValues(alpha: 0.5),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 13,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _isChangingPassword
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Değiştir',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ],
       ),
     );
@@ -987,11 +1047,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _passwordField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _primaryColor, width: 1.6),
+        ),
+        prefixIcon: Icon(icon, size: 20, color: _primaryColor),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            size: 20,
+            color: Colors.grey.shade600,
+          ),
+          onPressed: onToggle,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSecurityTile({
     required IconData icon,
     required String title,
     required _VerificationStatus status,
     required VoidCallback onTap,
+    Widget? trailing,
   }) {
     return InkWell(
       onTap: onTap,
@@ -1033,6 +1133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+            if (trailing != null) ...[const SizedBox(width: 6), trailing],
           ],
         ),
       ),
