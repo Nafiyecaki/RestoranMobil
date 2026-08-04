@@ -70,6 +70,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         adi: adi,
         soyadi: soyadi,
         telefon: telefon,
+        email: widget.user.uyeEmail,
       );
 
       if (!mounted) return;

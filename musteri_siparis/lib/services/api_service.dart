@@ -13,13 +13,13 @@ class ApiService {
   // ============================================================
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:5141/api';
     } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:5000/api';
+      return 'http://10.0.2.2:5141/api';
     } else if (Platform.isIOS) {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:5141/api';
     } else {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:5141/api';
     }
   }
 
@@ -150,62 +150,63 @@ class ApiService {
   // 🛒 SİPARİŞ OLUŞTUR
   // ============================================================
 
+  static Future<Map<String, dynamic>> siparisOlustur({
+    required String siparisTipi,
+    String? odemeTipi,
+    String? musteriAdi,
+    String? musteriTelefon,
+    String? musteriAdres,
+    int? masaId,
+    int? uyeId, // ✅ YENİ: UyeId eklendi
+    required List<Map<String, dynamic>> detaylar,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {'Content-Type': 'application/json'};
 
-static Future<Map<String, dynamic>> siparisOlustur({
-  required String siparisTipi,
-  String? odemeTipi,
-  String? musteriAdi,
-  String? musteriTelefon,
-  String? musteriAdres,
-  int? masaId,
-  int? uyeId,
-  required List<Map<String, dynamic>> detaylar,
-}) async {
-  try {
-    final token = await _getToken();
-    final headers = {'Content-Type': 'application/json'};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
 
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
+      final body = jsonEncode({
+        'siparisTipi': siparisTipi,
+        'odemeTipi': odemeTipi,
+        'musteriAdi': musteriAdi,
+        'musteriTelefon': musteriTelefon,
+        'musteriAdres': musteriAdres,
+        'masaId': masaId,
+        'uyeId': uyeId, // ✅ UyeId gönderiliyor
+        'detaylar': detaylar,
+      });
 
-    final body = jsonEncode({
-      'siparisTipi': siparisTipi,
-      'odemeTipi': odemeTipi ?? 'KAPIDA_ODEME', // ✅ Varsayılan değer eklendi
-      'musteriAdi': musteriAdi,
-      'musteriTelefon': musteriTelefon,
-      'musteriAdres': musteriAdres,
-      'masaId': masaId,
-      'uyeId': uyeId,
-      'detaylar': detaylar,
-    });
+      final response = await http.post(
+        Uri.parse('$baseUrl/siparisler'),
+        headers: headers,
+        body: body,
+      );
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/siparisler'),
-      headers: headers,
-      body: body,
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return {
-        'success': true,
-        'data': data,
-        'message': '✅ Sipariş başarıyla oluşturuldu!',
-      };
-    } else {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message': '✅ Sipariş başarıyla oluşturuldu!',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': '❌ Sipariş oluşturulamadı! Lütfen tekrar deneyin.',
+        };
+      }
+    } catch (e) {
       return {
         'success': false,
-        'message': '❌ Sipariş oluşturulamadı! Lütfen tekrar deneyin.',
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
       };
     }
-  } catch (e) {
-    return {
-      'success': false,
-      'message': '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
-    };
   }
-}
+
   // ============================================================
   // 👤 KULLANICI PROFİLİ
   // ============================================================
@@ -240,6 +241,7 @@ static Future<Map<String, dynamic>> siparisOlustur({
     required String adi,
     required String soyadi,
     required String telefon,
+    String? email,
   }) async {
     try {
       final token = await _getToken();
@@ -248,15 +250,18 @@ static Future<Map<String, dynamic>> siparisOlustur({
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final response = await http.put(
-        Uri.parse('$baseUrl/uyeler/profil'),
-        headers: headers,
-        body: jsonEncode({
-          'uyeAdi': adi,
-          'uyeSoyadi': soyadi,
-          'uyeTelefon': telefon,
-        }),
-      );
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/uyeler/profil'),
+            headers: headers,
+            body: jsonEncode({
+              'uyeAdi': adi,
+              'uyeSoyadi': soyadi,
+              'uyeTelefon': telefon,
+              if (email != null && email.isNotEmpty) 'uyeEmail': email,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -266,10 +271,39 @@ static Future<Map<String, dynamic>> siparisOlustur({
           'message': '✅ Profil başarıyla güncellendi!',
         };
       } else {
-        return {'success': false, 'message': '❌ Profil güncellenemedi!'};
+        String detail = '';
+        try {
+          final body = jsonDecode(utf8.decode(response.bodyBytes));
+          if (body is Map) {
+            if (body['errors'] is Map) {
+              final errors = body['errors'] as Map;
+              detail = errors.entries
+                  .map((e) {
+                    final msgs = e.value is List
+                        ? (e.value as List).join(' ')
+                        : e.value.toString();
+                    return '${e.key}: $msgs';
+                  })
+                  .join(' | ');
+            } else {
+              detail =
+                  (body['message'] ?? body['title'] ?? body['error'] ?? body)
+                      .toString();
+            }
+          } else {
+            detail = body.toString();
+          }
+        } catch (_) {
+          detail = utf8.decode(response.bodyBytes);
+        }
+        return {
+          'success': false,
+          'message':
+              '❌ Profil güncellenemedi! (${response.statusCode}) $detail',
+        };
       }
     } catch (e) {
-      return {'success': false, 'message': '⚠️ Bağlantı hatası!'};
+      return {'success': false, 'message': '⚠️ Bağlantı hatası: $e'};
     }
   }
 
@@ -287,11 +321,13 @@ static Future<Map<String, dynamic>> siparisOlustur({
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/sifre-degistir'),
-        headers: headers,
-        body: jsonEncode({'eskiSifre': eskiSifre, 'yeniSifre': yeniSifre}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/sifre-degistir'),
+            headers: headers,
+            body: jsonEncode({'eskiSifre': eskiSifre, 'yeniSifre': yeniSifre}),
+          )
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
