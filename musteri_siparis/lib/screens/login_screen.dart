@@ -1,7 +1,9 @@
 // lib/screens/login_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/sepet_provider.dart';
 import '../services/api_service.dart';
 import 'menu_screen.dart';
 
@@ -52,6 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (result['success'] == true) {
         final data = result['data'] ?? {};
+        final nestedData = data['data'] is Map<String, dynamic>
+            ? data['data'] as Map<String, dynamic>
+            : const <String, dynamic>{};
 
         // 🔥 ROL BELİRLEME (Web'deki gibi)
         String userRole = (data['rol'] ?? data['Rol'] ?? data['role'] ?? '')
@@ -114,7 +119,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // 🔥 Kullanıcı bilgilerini kaydet
         final user = {
-          'id': data['personelId'] ?? data['PersonelId'] ?? data['id'] ?? 0,
+          'id':
+              data['userId'] ??
+              data['UserId'] ??
+              data['personelId'] ??
+              data['PersonelId'] ??
+              data['id'] ??
+              nestedData['userId'] ??
+              nestedData['UserId'] ??
+              nestedData['personelId'] ??
+              nestedData['PersonelId'] ??
+              nestedData['id'] ??
+              0,
           'name':
               data['adSoyad'] ??
               data['AdSoyad'] ??
@@ -129,6 +145,10 @@ class _LoginScreenState extends State<LoginScreen> {
           'user',
           jsonEncode(user),
         ); // ✅ jsonEncode çalışıyor
+        await prefs.setString('user_id', user['id'].toString());
+
+        if (!mounted) return;
+        await context.read<SepetProvider>().reloadFavoriler();
 
         // 🔥 YÖNLENDİRME
         if (!mounted) return;
@@ -186,6 +206,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user', jsonEncode(user));
+      await prefs.setString('user_id', 'guest');
+
+      if (!mounted) return;
+      await context.read<SepetProvider>().reloadFavoriler();
 
       if (!mounted) return;
 
@@ -216,7 +240,9 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(color: Colors.white),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+        ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -117,65 +116,6 @@ class _AddressListScreenState extends State<AddressListScreen> {
 
   Future<void> _onSelectAddress(Address address) async {
     await _setDefaultAddress(address.adresId);
-  }
-
-  Future<void> _onUseCurrentLocation() async {
-    final permissionResult = await _ensureLocationPermission();
-    if (permissionResult == null) return;
-
-    final position = permissionResult;
-    Placemark? placemark;
-    try {
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        placemark = placemarks.first;
-      }
-    } catch (e) {
-      debugPrint('Placemark alınamadı: $e');
-    }
-
-    final seed = _AddressFormSeed.fromCurrentLocation(
-      placemark: placemark,
-      latitude: position.latitude,
-      longitude: position.longitude,
-      phone: _user?.uyeTelefon ?? '',
-    );
-    await _openAddressForm(seed: seed);
-  }
-
-  Future<Position?> _ensureLocationPermission() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showSnackBar('Konum servisleri kapalı', Colors.orange);
-      return null;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
-      _showSnackBar('Konum izni verilmedi', Colors.orange);
-      return null;
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _showSnackBar('Konum izni kalıcı olarak reddedildi', Colors.orange);
-      return null;
-    }
-
-    try {
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-    } catch (e) {
-      _showSnackBar('Konum alınamadı', Colors.red);
-      return null;
-    }
   }
 
   Future<void> _openAddressForm({
@@ -539,34 +479,30 @@ class _AddressListScreenState extends State<AddressListScreen> {
         .join(separator);
   }
 
-  void _openFullMap(LatLng coordinates, String title) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            _AddressMapScreen(title: title, coordinates: coordinates),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: isDark ? const Color(0xFF141414) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black87,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: Icon(
+            Icons.close,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
         ),
-        title: const Text(
+        title: Text(
           'Adreslerim',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: _isLoading
@@ -583,58 +519,36 @@ class _AddressListScreenState extends State<AddressListScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark
+                              ? const Color(0xFF1C1C1C)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Text(
-                          'Düzenle butonuna basarak konumunu ve adres bilgilerini düzenleyebilir veya adresini silebilirsin.',
+                        child: Text(
+                          'Düzenle butonuna basarak adres bilgilerini düzenleyebilir veya adresini silebilirsin.',
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: isDark ? Colors.grey.shade300 : Colors.grey,
                             height: 1.4,
                             fontSize: 13,
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _onUseCurrentLocation,
-                              icon: const Icon(Icons.my_location_outlined),
-                              label: const Text('Mevcut Konumumu Kullan'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _primaryColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                              ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openAddressForm(),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Yeni Adres Ekle'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _accentColor,
+                            side: const BorderSide(color: _primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openAddressForm(),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Yeni Adres Ekle'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _accentColor,
-                                side: const BorderSide(color: _primaryColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -661,7 +575,6 @@ class _AddressListScreenState extends State<AddressListScreen> {
                           onEdit: () =>
                               _openAddressForm(existingAddress: address),
                           onDelete: () => _deleteAddress(address),
-                          onPreviewTap: _openFullMap,
                           cardDataFuture: _cardDataFor(address),
                         );
                       },
@@ -712,7 +625,6 @@ class _AddressCard extends StatelessWidget {
     required this.onSelect,
     required this.onEdit,
     required this.onDelete,
-    required this.onPreviewTap,
     required this.cardDataFuture,
   });
 
@@ -723,7 +635,6 @@ class _AddressCard extends StatelessWidget {
   final VoidCallback onSelect;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final void Function(LatLng coordinates, String title) onPreviewTap;
   final Future<_AddressCardData> cardDataFuture;
 
   static const Color _primaryColor = Color(0xFF2E7D32);
@@ -850,113 +761,7 @@ class _AddressCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (isSelected) ...[
-                  const SizedBox(height: 16),
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    _buildPreviewLoading()
-                  else if (data?.coordinates != null)
-                    GestureDetector(
-                      onTap: () {
-                        final previewData = data;
-                        if (previewData == null) return;
-                        onPreviewTap(
-                          previewData.coordinates!,
-                          previewData.title,
-                        );
-                      },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: SizedBox(
-                          height: 180,
-                          child: Builder(
-                            builder: (context) {
-                              final previewData = data!;
-                              return Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: GoogleMap(
-                                        initialCameraPosition: CameraPosition(
-                                          target: previewData.coordinates!,
-                                          zoom: 15,
-                                        ),
-                                        markers: {
-                                          Marker(
-                                            markerId: const MarkerId(
-                                              'selected_address',
-                                            ),
-                                            position: previewData.coordinates!,
-                                          ),
-                                        },
-                                        myLocationButtonEnabled: false,
-                                        zoomControlsEnabled: false,
-                                        scrollGesturesEnabled: false,
-                                        zoomGesturesEnabled: false,
-                                        rotateGesturesEnabled: false,
-                                        tiltGesturesEnabled: false,
-                                        mapToolbarEnabled: false,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    left: 12,
-                                    right: 12,
-                                    bottom: 12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.55,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Text(
-                                        'Haritayı büyütmek için dokun',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F0),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.map_outlined,
-                            color: Colors.grey,
-                            size: 28,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Harita önizlemesi oluşturulamadı',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                if (isSelected) ...[const SizedBox(height: 4)],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -996,27 +801,6 @@ class _AddressCard extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildPreviewLoading() {
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F0),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Center(
-        child: SizedBox(
-          width: 26,
-          height: 26,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: _primaryColor,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1288,38 +1072,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
   }
 }
 
-class _AddressMapScreen extends StatelessWidget {
-  const _AddressMapScreen({required this.title, required this.coordinates});
-
-  final String title;
-  final LatLng coordinates;
-
-  static const Color _primaryColor = Color(0xFF2E7D32);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(target: coordinates, zoom: 16),
-        markers: {
-          Marker(markerId: const MarkerId('address'), position: coordinates),
-        },
-        myLocationButtonEnabled: false,
-        zoomControlsEnabled: true,
-        scrollGesturesEnabled: true,
-        zoomGesturesEnabled: true,
-        rotateGesturesEnabled: true,
-        tiltGesturesEnabled: true,
-      ),
-    );
-  }
-}
-
 class _AddressCardData {
   const _AddressCardData({
     required this.title,
@@ -1379,45 +1131,6 @@ class _AddressFormSeed {
     required this.deliveryZone,
     required this.setDefault,
   });
-
-  factory _AddressFormSeed.fromCurrentLocation({
-    required Placemark? placemark,
-    required double latitude,
-    required double longitude,
-    required String phone,
-  }) {
-    final city = placemark?.administrativeArea ?? '';
-    final district = placemark?.subAdministrativeArea ?? '';
-    final neighborhood =
-        placemark?.subLocality ?? placemark?.thoroughfare ?? '';
-    final detail =
-        [
-              placemark?.street,
-              placemark?.name,
-              placemark?.subLocality,
-              placemark?.subAdministrativeArea,
-              placemark?.administrativeArea,
-            ]
-            .whereType<String>()
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .join(', ');
-
-    return _AddressFormSeed(
-      title: 'Mevcut Konum',
-      neighborhood: neighborhood,
-      district: district,
-      city: city,
-      detail: detail,
-      buildingNo: '',
-      floor: '',
-      apartmentNo: '',
-      phone: phone,
-      coordinates: LatLng(latitude, longitude),
-      deliveryZone: true,
-      setDefault: false,
-    );
-  }
 
   final String title;
   final String neighborhood;

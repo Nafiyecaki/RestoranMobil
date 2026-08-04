@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Siparis Durumu Mock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --bg: #fafafa;
+      --card: #ffffff;
+      --border: #e8e8e8;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #e5e7eb;
+      font-family: Inter, sans-serif;
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .phone {
+      width: 390px;
+      height: 844px;
+      border-radius: 40px;
+      overflow: hidden;
+      background: var(--bg);
+      border: 10px solid #111;
+      box-shadow: 0 24px 60px rgba(17, 24, 39, 0.24);
+      position: relative;
+    }
+
+    .notch {
+      width: 132px;
+      height: 28px;
+      background: #111;
+      border-radius: 0 0 16px 16px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+    }
+
+    .app {
+      height: 100%;
+      overflow: auto;
+      padding: 54px 16px 20px;
+    }
+
+    .topbar {
+      height: 44px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(17, 24, 39, 0.04);
+    }
+
+    .back {
+      text-align: center;
+      font-size: 18px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    .check {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 52px;
+      line-height: 90px;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 16px 0 6px;
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .card {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .eta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .eta .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(46, 125, 50, 0.12);
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .eta .time { font-size: 20px; font-weight: 800; }
+    .eta .label { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .badge {
+      margin-left: auto;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      margin: 8px 0;
+      align-items: start;
+    }
+
+    .dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: 2px solid #d1d5db;
+      color: #9ca3af;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      position: relative;
+    }
+
+    .dot.done {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .dot.done::after,
+    .dot.pending::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 24px;
+      width: 2px;
+      height: 26px;
+      transform: translateX(-50%);
+      background: #e5e7eb;
+    }
+
+    .dot.done::after { background: var(--primary); }
+    .dot.last::after { display: none; }
+
+    .timeline-label {
+      padding-top: 2px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .timeline-label.done {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: start;
+    }
+
+    .row-last {
+      margin-bottom: 0;
+    }
+
+    .row .i {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: #f3f4f6;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .k { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .v { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+    .item {
+      border: 1px solid #ededed;
+      border-radius: 14px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .item-last {
+      margin-bottom: 0;
+    }
+
+    .thumb {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: #f3f4f6;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .iname { font-size: 14px; font-weight: 700; }
+    .qty { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .price { font-size: 14px; font-weight: 700; }
+
+    .sum {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+      padding-top: 12px;
+      font-weight: 700;
+    }
+
+    .total .value {
+      color: var(--primary);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .actions {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .btn {
+      height: 54px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 16px;
+      border: 1px solid transparent;
+      display: grid;
+      place-items: center;
+    }
+
+    .btn.primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    @media (max-width: 420px) {
+      body { padding: 0; }
+      .phone {
+        width: 100vw;
+        height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="app">
+      <div class="topbar">
+        <div class="back">‹</div>
+        <div class="title">Sipariş Durumu</div>
+        <div></div>
+      </div>
+
+      <div class="hero">
+        <div class="check">✓</div>
+        <h1>Siparişiniz Başarıyla Alındı</h1>
+        <p>Restoran siparişinizi onayladı.</p>
+      </div>
+
+      <div class="card">
+        <div class="eta">
+          <div class="icon">⏱️</div>
+          <div>
+            <div class="label">Tahmini Teslimat</div>
+            <div class="time">25–35 dk</div>
+          </div>
+          <div class="badge">Canlı</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Sipariş Durumu</h3>
+        <div class="timeline-item">
+          <div class="dot done">✓</div>
+          <div class="timeline-label done">Sipariş Alındı</div>
+        </div>
+        <div class="timeline-item">
+          <div class="dot done">✓</div>
+          <div class="timeline-label done">Hazırlanıyor</div>
+        </div>
+        <div class="timeline-item">
+          <div class="dot pending">○</div>
+          <div class="timeline-label">Kurye Yolda</div>
+        </div>
+        <div class="timeline-item">
+          <div class="dot pending last">○</div>
+          <div class="timeline-label">Teslim Edildi</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Müşteri Bilgileri</h3>
+        <div class="row"><div class="i">🏷️</div><div><div class="k">Sipariş No</div><div class="v">#4082</div></div></div>
+        <div class="row"><div class="i">👤</div><div><div class="k">Müşteri</div><div class="v">Ahmet Yılmaz</div></div></div>
+        <div class="row"><div class="i">📞</div><div><div class="k">Telefon</div><div class="v">0555 123 45 67</div></div></div>
+        <div class="row"><div class="i">📍</div><div><div class="k">Adres</div><div class="v">Atatürk Mah. İstiklal Cad. No:18 D:5, Kadıköy / İstanbul</div></div></div>
+        <div class="row"><div class="i">🚚</div><div><div class="k">Sipariş Tipi</div><div class="v">Paket Servis</div></div></div>
+        <div class="row row-last"><div class="i">💳</div><div><div class="k">Ödeme Tipi</div><div class="v">Kredi Kartı</div></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Sipariş Ürünleri</h3>
+        <div class="item"><div class="thumb">🍲</div><div><div class="iname">Mercimek Çorbası</div><div class="qty">1 x</div></div><div class="price">46.00 ₺</div></div>
+        <div class="item"><div class="thumb">🥙</div><div><div class="iname">Adana Kebap</div><div class="qty">2 x</div></div><div class="price">330.00 ₺</div></div>
+        <div class="item item-last"><div class="thumb">🥛</div><div><div class="iname">Ayran</div><div class="qty">2 x</div></div><div class="price">36.00 ₺</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Ödeme Özeti</h3>
+        <div class="sum"><span>Ara Toplam</span><span>412.00 ₺</span></div>
+        <div class="sum"><span>Teslimat</span><span>24.00 ₺</span></div>
+        <div class="sum"><span>İndirim</span><span>0.00 ₺</span></div>
+        <div class="total"><span>Toplam</span><span class="value">436.00 ₺</span></div>
+      </div>
+
+      <div class="actions">
+        <div class="btn primary">🟢 Siparişi Takip Et</div>
+        <div class="btn secondary">🏠 Ana Sayfaya Dön</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

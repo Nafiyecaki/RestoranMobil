@@ -152,6 +152,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> siparisOlustur({
     required String siparisTipi,
+    String? odemeTipi,
     String? musteriAdi,
     String? musteriTelefon,
     String? musteriAdres,
@@ -169,6 +170,7 @@ class ApiService {
 
       final body = jsonEncode({
         'siparisTipi': siparisTipi,
+        'odemeTipi': odemeTipi,
         'musteriAdi': musteriAdi,
         'musteriTelefon': musteriTelefon,
         'musteriAdres': musteriAdres,

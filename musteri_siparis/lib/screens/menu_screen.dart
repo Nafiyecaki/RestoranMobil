@@ -124,7 +124,10 @@ class _MenuScreenState extends State<MenuScreen> {
     if (index == 2) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              const ProfileScreen(geriDonusHedefi: ProfileBackTarget.menu),
+        ),
       );
     }
   }
@@ -231,8 +234,12 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F0F)
+          : const Color(0xFFF4F6F8),
       appBar: AppBar(
         toolbarHeight: 74,
         titleSpacing: 16,
@@ -248,23 +255,23 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'Şeker Restoran',
               style: TextStyle(
-                color: Color(0xFF1F4B2A),
+                color: isDark ? Colors.white : const Color(0xFF1F4B2A),
                 fontWeight: FontWeight.w700,
                 fontSize: 19,
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF151515) : Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_none,
-              color: Color(0xFF111827),
+              color: isDark ? Colors.white70 : const Color(0xFF111827),
             ),
             onPressed: () {},
           ),
@@ -281,7 +288,13 @@ class _MenuScreenState extends State<MenuScreen> {
                 children: [
                   const Icon(Icons.error_outline, color: Colors.red, size: 50),
                   const SizedBox(height: 12),
-                  Text(_errorMessage!, textAlign: TextAlign.center),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[200] : Colors.black87,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _menuleriYukle,
@@ -294,7 +307,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 ],
               ),
             )
-          : _buildMenuContent(),
+          : _buildMenuContent(isDark),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
         onTap: _onBottomNavTap,
@@ -302,26 +315,34 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _buildMenuContent() {
+  Widget _buildMenuContent(bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSearchBar(),
+          _buildSearchBar(isDark),
           const SizedBox(height: 12),
-          _buildCategoryFilter(),
+          _buildCategoryFilter(isDark),
           const SizedBox(height: 16),
           _buildSectionTitle(
             _selectedKategori == 'Tümü'
                 ? 'Tüm Menü'
                 : '$_selectedKategori Menüsü',
+            isDark: isDark,
           ),
           const SizedBox(height: 10),
           _filtrelenmisUrunler.isEmpty
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('Ürün bulunamadı 😔')),
+                  child: Center(
+                    child: Text(
+                      'Ürün bulunamadı 😔',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[300] : Colors.black87,
+                      ),
+                    ),
+                  ),
                 )
               : GridView.builder(
                   shrinkWrap: true,
@@ -334,61 +355,85 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                   itemCount: _filtrelenmisUrunler.length,
                   itemBuilder: (context, index) =>
-                      _buildProductCard(_filtrelenmisUrunler[index]),
+                      _buildProductCard(_filtrelenmisUrunler[index], isDark),
                 ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE5E7EB),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Color(0xFF111827), size: 26),
+          Icon(
+            Icons.search,
+            color: isDark ? Colors.grey[300] : const Color(0xFF111827),
+            size: 26,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Yemek veya içecek ara...',
                 border: InputBorder.none,
-                hintStyle: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.grey[500] : const Color(0xFF6B7280),
+                  fontSize: 16,
+                ),
               ),
-              style: const TextStyle(fontSize: 15),
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white : const Color(0xFF111827),
+              ),
+              cursorColor: const Color(0xFF2E7D32),
             ),
           ),
           if (_searchQuery.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.clear, size: 18),
+              icon: Icon(
+                Icons.clear,
+                size: 18,
+                color: isDark ? Colors.grey[300] : const Color(0xFF111827),
+              ),
               onPressed: () {
                 _searchController.clear();
                 setState(() => _searchQuery = '');
               },
             )
           else
-            const Icon(Icons.tune, color: Color(0xFF6B7280)),
+            Icon(
+              Icons.tune,
+              color: isDark ? Colors.grey[500] : const Color(0xFF6B7280),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, {String? trailing}) {
+  Widget _buildSectionTitle(
+    String title, {
+    required bool isDark,
+    String? trailing,
+  }) {
     return Row(
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20 / 1.1,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1F4B2A),
+            color: isDark ? Colors.white : const Color(0xFF1F4B2A),
           ),
         ),
         const Spacer(),
@@ -397,7 +442,7 @@ class _MenuScreenState extends State<MenuScreen> {
             children: [
               Text(
                 trailing,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF2E7D32),
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -415,7 +460,7 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _buildCategoryFilter() {
+  Widget _buildCategoryFilter(bool isDark) {
     return SizedBox(
       height: 44,
       child: ListView.builder(
@@ -434,12 +479,16 @@ class _MenuScreenState extends State<MenuScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF2E7D32) : Colors.white,
+                  color: isSelected
+                      ? const Color(0xFF2E7D32)
+                      : (isDark ? const Color(0xFF1B1B1B) : Colors.white),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: isSelected
                         ? const Color(0xFF2E7D32)
-                        : const Color(0xFFE5E7EB),
+                        : (isDark
+                              ? const Color(0xFF323232)
+                              : const Color(0xFFE5E7EB)),
                   ),
                 ),
                 child: Row(
@@ -449,7 +498,9 @@ class _MenuScreenState extends State<MenuScreen> {
                       size: 16,
                       color: isSelected
                           ? Colors.white
-                          : const Color(0xFF4B5563),
+                          : (isDark
+                                ? Colors.grey[300]
+                                : const Color(0xFF4B5563)),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -457,7 +508,9 @@ class _MenuScreenState extends State<MenuScreen> {
                       style: TextStyle(
                         color: isSelected
                             ? Colors.white
-                            : const Color(0xFF111827),
+                            : (isDark
+                                  ? Colors.grey[100]
+                                  : const Color(0xFF111827)),
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -474,8 +527,8 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _buildProductCard(Urun urun) {
-    final sepetProvider = Provider.of<SepetProvider>(context, listen: false);
+  Widget _buildProductCard(Urun urun, bool isDark) {
+    final sepetProvider = context.watch<SepetProvider>();
     final isFavori = sepetProvider.isFavori(urun.urunId);
     final resimDosyasi = _getResimDosyasi(urun.urunAdi);
 
@@ -503,9 +556,11 @@ class _MenuScreenState extends State<MenuScreen> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF171717) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(
+            color: isDark ? const Color(0xFF303030) : const Color(0xFFE5E7EB),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,13 +594,19 @@ class _MenuScreenState extends State<MenuScreen> {
                   top: 6,
                   right: 6,
                   child: GestureDetector(
-                    onTap: () => sepetProvider.favoriEkleCikar(urun.urunId),
+                    onTap: () {
+                      setState(() {
+                        sepetProvider.favoriEkleCikar(urun.urunId);
+                      });
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: isFavori
+                            ? Colors.red
+                            : (isDark ? const Color(0xFF252525) : Colors.white),
                         shape: BoxShape.circle,
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
                             color: Colors.black26,
                             blurRadius: 3,
@@ -555,7 +616,7 @@ class _MenuScreenState extends State<MenuScreen> {
                       ),
                       child: Icon(
                         isFavori ? Icons.favorite : Icons.favorite_border,
-                        color: isFavori ? Colors.red : Colors.grey[500],
+                        color: isFavori ? Colors.white : Colors.grey[500],
                         size: 16,
                       ),
                     ),
@@ -570,10 +631,10 @@ class _MenuScreenState extends State<MenuScreen> {
                 children: [
                   Text(
                     urun.urunAdi,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -581,7 +642,10 @@ class _MenuScreenState extends State<MenuScreen> {
                   const SizedBox(height: 2),
                   Text(
                     urun.aciklama ?? '',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

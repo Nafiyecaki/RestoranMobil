@@ -4,20 +4,25 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/sepet_provider.dart';
 import '../services/api_service.dart';
+import 'siparis_ozet_screen.dart';
 
 class OdemeScreen extends StatefulWidget {
   final String siparisTipi;
+  final String odemeTipi;
   final String musteriAdi;
   final String musteriTelefon;
   final String? musteriAdres;
+  final int? uyeId;
   final double toplamTutar;
 
   const OdemeScreen({
     super.key,
     required this.siparisTipi,
+    required this.odemeTipi,
     required this.musteriAdi,
     required this.musteriTelefon,
     this.musteriAdres,
+    this.uyeId,
     required this.toplamTutar,
   });
 
@@ -76,7 +81,9 @@ class _OdemeScreenState extends State<OdemeScreen>
 
     if (cleanNumber.startsWith('4')) {
       return 'VISA';
-    } else if (RegExp(r'^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)').hasMatch(cleanNumber)) {
+    } else if (RegExp(
+      r'^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)',
+    ).hasMatch(cleanNumber)) {
       return 'MASTERCARD';
     } else if (cleanNumber.startsWith('9792') || cleanNumber.startsWith('65')) {
       return 'TROY';
@@ -134,7 +141,10 @@ class _OdemeScreenState extends State<OdemeScreen>
       return;
     }
     if (_sktController.text.length < 5) {
-      _showSnackBar('Geçerli bir son kullanma tarihi girin (AA/YY)', Colors.orange);
+      _showSnackBar(
+        'Geçerli bir son kullanma tarihi girin (AA/YY)',
+        Colors.orange,
+      );
       return;
     }
     if (_cvvController.text.length < 3) {
@@ -145,31 +155,74 @@ class _OdemeScreenState extends State<OdemeScreen>
     setState(() => _gonderiliyor = true);
 
     try {
-      final detaylar = sepet.sepet.map((item) => {
-        'urunId': item.urun.urunId,
-        'adet': item.adet,
-        'detayNot': item.not,
-      }).toList();
+      final ozetUrunler = sepet.sepet
+          .map(
+            (item) => SiparisOzetItemData(
+              urunAdi: item.urun.urunAdi,
+              adet: item.adet,
+              birimFiyat: item.urun.fiyat,
+              not: item.not,
+            ),
+          )
+          .toList();
+      final araToplam = sepet.toplamFiyat;
+      final teslimatUcreti = widget.siparisTipi == 'SALON' ? 0.0 : 9.99;
+
+      final detaylar = sepet.sepet
+          .map(
+            (item) => {
+              'urunId': item.urun.urunId,
+              'adet': item.adet,
+              'detayNot': item.not,
+            },
+          )
+          .toList();
 
       final result = await ApiService.siparisOlustur(
         siparisTipi: widget.siparisTipi,
+        odemeTipi: widget.odemeTipi,
         musteriAdi: widget.musteriAdi,
         musteriTelefon: widget.musteriTelefon,
         musteriAdres: widget.musteriAdres,
+        uyeId: widget.uyeId,
         detaylar: detaylar,
       );
 
       if (result['success'] == true) {
+        final data = result['data'] as Map<String, dynamic>?;
+        final siparisId = (data?['siparisId'] as num?)?.toInt();
+        final toplamTutar =
+            (data?['toplamTutar'] as num?)?.toDouble() ??
+            (araToplam + teslimatUcreti);
+
         sepet.sepetiTemizle();
         _showSnackBar('🎉 Ödeme Başarılı! Siparişiniz alındı.', Colors.green);
         if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => SiparisOzetScreen(
+                siparisId: siparisId,
+                siparisTipi: widget.siparisTipi,
+                odemeTipi: widget.odemeTipi,
+                musteriAdi: widget.musteriAdi,
+                musteriTelefon: widget.musteriTelefon,
+                musteriAdres: widget.musteriAdres,
+                urunler: ozetUrunler,
+                araToplam: araToplam,
+                teslimatUcreti: teslimatUcreti,
+                toplamTutar: toplamTutar,
+              ),
+            ),
+          );
         }
       } else {
         _showSnackBar(result['message'] ?? 'Ödeme alınamadı', Colors.red);
       }
     } catch (e) {
-      _showSnackBar('❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}', Colors.red);
+      _showSnackBar(
+        '❌ Hata: ${e.toString().replaceFirst('Exception: ', '')}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _gonderiliyor = false);
     }
@@ -194,11 +247,16 @@ class _OdemeScreenState extends State<OdemeScreen>
     final cardType = _getCardType(_kartNoController.text);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F0F)
+          : const Color(0xFFF5F5F5),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
-        title: const Text('💳 Kart ile Ödeme', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '💳 Kart ile Ödeme',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         foregroundColor: isDark ? Colors.white : Colors.black87,
         centerTitle: true,
       ),
@@ -292,7 +350,9 @@ class _OdemeScreenState extends State<OdemeScreen>
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _gonderiliyor ? null : () => _odemeVeSiparisTamamla(sepet),
+                onPressed: _gonderiliyor
+                    ? null
+                    : () => _odemeVeSiparisTamamla(sepet),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
                   shape: RoundedRectangleBorder(
@@ -309,13 +369,19 @@ class _OdemeScreenState extends State<OdemeScreen>
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           SizedBox(width: 12),
                           Text(
                             'İşlem Yapılıyor...',
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       )
@@ -347,7 +413,11 @@ class _OdemeScreenState extends State<OdemeScreen>
           gradient: _getCardGradient(cardType),
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [
-            BoxShadow(color: Colors.black38, blurRadius: 15, offset: Offset(0, 8))
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 15,
+              offset: Offset(0, 8),
+            ),
           ],
         ),
         child: Column(
@@ -402,8 +472,14 @@ class _OdemeScreenState extends State<OdemeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("KART SAHİBİ",
-                          style: TextStyle(color: Colors.grey.shade300, fontSize: 8, letterSpacing: 1)),
+                      Text(
+                        "KART SAHİBİ",
+                        style: TextStyle(
+                          color: Colors.grey.shade300,
+                          fontSize: 8,
+                          letterSpacing: 1,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         _kartIsimController.text.isEmpty
@@ -422,12 +498,24 @@ class _OdemeScreenState extends State<OdemeScreen>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("SON KULLANMA",
-                        style: TextStyle(color: Colors.grey.shade300, fontSize: 8, letterSpacing: 1)),
+                    Text(
+                      "SON KULLANMA",
+                      style: TextStyle(
+                        color: Colors.grey.shade300,
+                        fontSize: 8,
+                        letterSpacing: 1,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
-                      _sktController.text.isEmpty ? "AA/YY" : _sktController.text,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      _sktController.text.isEmpty
+                          ? "AA/YY"
+                          : _sktController.text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -472,7 +560,11 @@ class _OdemeScreenState extends State<OdemeScreen>
           gradient: _getCardGradient(cardType),
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [
-            BoxShadow(color: Colors.black38, blurRadius: 15, offset: Offset(0, 8))
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 15,
+              offset: Offset(0, 8),
+            ),
           ],
         ),
         child: Column(
@@ -484,7 +576,10 @@ class _OdemeScreenState extends State<OdemeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text("GÜVENLİK KODU (CVV)", style: TextStyle(color: Colors.grey.shade300, fontSize: 9)),
+                  Text(
+                    "GÜVENLİK KODU (CVV)",
+                    style: TextStyle(color: Colors.grey.shade300, fontSize: 9),
+                  ),
                   const SizedBox(height: 4),
                   Container(
                     width: double.infinity,
@@ -538,11 +633,18 @@ class _OdemeScreenState extends State<OdemeScreen>
         hintText: hint,
         prefixIcon: Icon(icon, color: Colors.deepOrange),
         filled: true,
-        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.04),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.04),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -555,7 +657,10 @@ class _OdemeScreenState extends State<OdemeScreen>
 
 class _CardNumberFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     var text = newValue.text.replaceAll(' ', '');
     var newString = '';
     for (int i = 0; i < text.length; i++) {
@@ -571,7 +676,10 @@ class _CardNumberFormatter extends TextInputFormatter {
 
 class _ExpiryDateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     var text = newValue.text.replaceAll('/', '');
     var newString = '';
     for (int i = 0; i < text.length; i++) {

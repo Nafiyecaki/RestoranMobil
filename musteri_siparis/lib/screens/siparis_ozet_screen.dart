@@ -1,0 +1,914 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import 'menu_screen.dart';
+
+class SiparisOzetItemData {
+  final String urunAdi;
+  final int adet;
+  final double birimFiyat;
+  final String? not;
+
+  const SiparisOzetItemData({
+    required this.urunAdi,
+    required this.adet,
+    required this.birimFiyat,
+    this.not,
+  });
+
+  double get satirToplami => birimFiyat * adet;
+}
+
+class SiparisOzetScreen extends StatefulWidget {
+  final int? siparisId;
+  final String siparisTipi;
+  final String odemeTipi;
+  final String musteriAdi;
+  final String musteriTelefon;
+  final String? musteriAdres;
+  final List<SiparisOzetItemData> urunler;
+  final double araToplam;
+  final double teslimatUcreti;
+  final double toplamTutar;
+  final String? initialDurum;
+
+  const SiparisOzetScreen({
+    super.key,
+    this.siparisId,
+    required this.siparisTipi,
+    required this.odemeTipi,
+    required this.musteriAdi,
+    required this.musteriTelefon,
+    this.musteriAdres,
+    required this.urunler,
+    required this.araToplam,
+    required this.teslimatUcreti,
+    required this.toplamTutar,
+    this.initialDurum,
+  });
+
+  @override
+  State<SiparisOzetScreen> createState() => _SiparisOzetScreenState();
+}
+
+class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
+  late String _siparisTipi;
+  late String _odemeTipi;
+  late String _musteriAdi;
+  late String _musteriTelefon;
+  String? _musteriAdres;
+  late List<SiparisOzetItemData> _urunler;
+  late double _araToplam;
+  late double _teslimatUcreti;
+  late double _toplamTutar;
+
+  String _durumMetni = 'Sipariş Alındı';
+  Timer? _pollTimer;
+  bool _isRefreshing = false;
+  bool _hasFirstSync = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _siparisTipi = widget.siparisTipi;
+    _odemeTipi = widget.odemeTipi;
+    _musteriAdi = widget.musteriAdi;
+    _musteriTelefon = widget.musteriTelefon;
+    _musteriAdres = widget.musteriAdres;
+    _urunler = List<SiparisOzetItemData>.from(widget.urunler);
+    _araToplam = widget.araToplam;
+    _teslimatUcreti = widget.teslimatUcreti;
+    _toplamTutar = widget.toplamTutar;
+    _durumMetni = _friendlyStatusText(widget.initialDurum);
+
+    if (widget.siparisId != null) {
+      _refreshOrderStatus();
+      _pollTimer = Timer.periodic(
+        const Duration(seconds: 7),
+        (_) => _refreshOrderStatus(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  String _formatSiparisTipi(String value) {
+    switch (value) {
+      case 'PAKET_SERVIS':
+        return 'Paket Servis';
+      case 'GEL_AL':
+        return 'Gel-Al';
+      case 'SALON':
+        return 'Salonda Ye';
+      default:
+        return value;
+    }
+  }
+
+  String _formatOdemeTipi(String value) {
+    switch (value) {
+      case 'KAPIDA_ODEME':
+        return 'Kapıda Ödeme (Kurye)';
+      case 'NAKIT':
+        return 'Kapıda Ödeme (Kurye)';
+      case 'KREDI_KARTI':
+        return 'Kredi Kartı';
+      case 'ONLINE':
+        return 'Online Ödeme';
+      default:
+        return value;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'Sipariş Alındı':
+        return Icons.receipt_long_rounded;
+      case 'Hazırlanıyor':
+        return Icons.restaurant_menu_rounded;
+      case 'Kurye Yolda':
+        return Icons.delivery_dining_rounded;
+      case 'Teslim Edildi':
+        return Icons.home_rounded;
+      default:
+        return Icons.circle;
+    }
+  }
+
+  IconData _infoIcon(String label) {
+    switch (label) {
+      case 'Sipariş No':
+        return Icons.tag_rounded;
+      case 'Müşteri':
+        return Icons.person_rounded;
+      case 'Telefon':
+        return Icons.phone_rounded;
+      case 'Adres':
+        return Icons.location_on_rounded;
+      case 'Sipariş Tipi':
+        return Icons.local_shipping_rounded;
+      case 'Ödeme Tipi':
+        return Icons.payments_rounded;
+      default:
+        return Icons.info_rounded;
+    }
+  }
+
+  Widget _card({required Widget child, EdgeInsets? padding}) {
+    return Container(
+      width: double.infinity,
+      padding: padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F111827),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  int _statusStepFromRaw(String? raw) {
+    final s = (raw ?? '').toLowerCase();
+    if (s.contains('teslim')) return 3;
+    // Sadece gerçekten yola çıkınca (YOLDA / dagitim) "Kurye Yolda" gösterilir.
+    // "KURYEDE" durumu kuryenin siparişi teslim aldığı ama henüz yola
+    // çıkmadığı anı temsil eder, bu yüzden burada "yol" ile eşleşmemesi için
+    // ayrı kontrol ediliyor (ör. "kuryede" içinde "yol" geçmez, güvenli).
+    if (s.contains('yolda') || s.contains('dagitim')) {
+      return 2;
+    }
+    if (s.contains('kuryede') ||
+        s.contains('hazır') ||
+        s.contains('hazir') ||
+        s.contains('piş')) {
+      return 1;
+    }
+    return 0;
+  }
+
+  String _friendlyStatusText(String? raw) {
+    final step = _statusStepFromRaw(raw);
+    if (step == 3) return 'Teslim Edildi';
+    if (step == 2) return 'Kurye Yolda';
+    if (step == 1) return 'Hazırlanıyor';
+    return 'Sipariş Alındı';
+  }
+
+  List<SiparisOzetItemData> _extractItems(Map<String, dynamic> order) {
+    final rawList =
+        order['detaylar'] ?? order['siparisDetaylari'] ?? order['items'] ?? [];
+    if (rawList is! List) return _urunler;
+
+    final parsed = rawList.whereType<Map>().map((raw) {
+      final map = raw.map((k, v) => MapEntry(k.toString(), v));
+      final qty = (map['adet'] ?? map['quantity'] ?? 1) as num;
+      final unitPrice =
+          (map['birimFiyat'] ?? map['fiyat'] ?? map['price'] ?? 0) as num;
+      return SiparisOzetItemData(
+        urunAdi: (map['urunAdi'] ?? map['name'] ?? 'Ürün').toString(),
+        adet: qty.toInt(),
+        birimFiyat: unitPrice.toDouble(),
+        not: map['detayNot']?.toString(),
+      );
+    }).toList();
+
+    return parsed.isEmpty ? _urunler : parsed;
+  }
+
+  Future<void> _refreshOrderStatus() async {
+    if (_isRefreshing || widget.siparisId == null) return;
+    _isRefreshing = true;
+
+    try {
+      final activeOrders = await ApiService.getMyOrders();
+      Map<String, dynamic>? order;
+
+      for (final o in activeOrders) {
+        final id = (o['siparisId'] as num?)?.toInt();
+        if (id == widget.siparisId) {
+          order = o;
+          break;
+        }
+      }
+
+      if (order == null) {
+        final historyOrders = await ApiService.getOrderHistory();
+        for (final o in historyOrders) {
+          final id = (o['siparisId'] as num?)?.toInt();
+          if (id == widget.siparisId) {
+            order = o;
+            break;
+          }
+        }
+      }
+
+      if (order == null || !mounted) return;
+      final currentOrder = order;
+
+      final previousStatus = _durumMetni;
+      final rawStatus = currentOrder['siparisDurumu']?.toString();
+      final newStatus = _friendlyStatusText(rawStatus);
+
+      final newSiparisTipi = (currentOrder['siparisTipi'] ?? _siparisTipi)
+          .toString();
+      final newOdemeTipi =
+          (currentOrder['odemeTipi'] ??
+                  currentOrder['odemeTuru'] ??
+                  currentOrder['odemeYontemi'] ??
+                  _odemeTipi)
+              .toString();
+      final newUrunler = _extractItems(currentOrder);
+      final newTeslimat =
+          (currentOrder['teslimatUcreti'] as num?)?.toDouble() ??
+          (newSiparisTipi == 'SALON' ? 0.0 : _teslimatUcreti);
+
+      final itemsToplam = newUrunler.fold<double>(
+        0,
+        (sum, item) => sum + item.satirToplami,
+      );
+      final newToplam =
+          (currentOrder['toplamTutar'] as num?)?.toDouble() ??
+          (itemsToplam + newTeslimat);
+      final newAraToplam = itemsToplam > 0
+          ? itemsToplam
+          : (newToplam - newTeslimat).clamp(0.0, double.infinity);
+
+      setState(() {
+        _durumMetni = newStatus;
+        _siparisTipi = newSiparisTipi;
+        _odemeTipi = newOdemeTipi;
+        _musteriAdi =
+            (currentOrder['musteriAdi']?.toString().trim().isNotEmpty ?? false)
+            ? currentOrder['musteriAdi'].toString()
+            : _musteriAdi;
+        _musteriTelefon =
+            (currentOrder['musteriTelefon']?.toString().trim().isNotEmpty ??
+                false)
+            ? currentOrder['musteriTelefon'].toString()
+            : _musteriTelefon;
+        _musteriAdres =
+            (currentOrder['musteriAdres']?.toString().trim().isNotEmpty ??
+                false)
+            ? currentOrder['musteriAdres'].toString()
+            : _musteriAdres;
+        _urunler = newUrunler;
+        _teslimatUcreti = newTeslimat;
+        _araToplam = newAraToplam;
+        _toplamTutar = newToplam;
+      });
+
+      final statusChanged = previousStatus != _durumMetni;
+      if (_hasFirstSync && statusChanged && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sipariş durumu güncellendi: $_durumMetni'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+      _hasFirstSync = true;
+    } catch (_) {
+      // Sessizce geç: otomatik yenileme bir sonraki döngüde tekrar deneyecek.
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = Color(0xFF2E7D32);
+    const bg = Color(0xFFFAFAFA);
+    const primaryText = Color(0xFF111827);
+    const secondaryText = Color(0xFF6B7280);
+    final teslimSuresi = '25–35 dk';
+    final indirim = 0.0;
+
+    final currentStep = _statusStepFromRaw(_durumMetni);
+
+    final statusItems = [
+      ('Sipariş Alındı', currentStep >= 0),
+      ('Hazırlanıyor', currentStep >= 1),
+      ('Kurye Yolda', currentStep >= 2),
+      ('Teslim Edildi', currentStep >= 3),
+    ];
+
+    String musteriAdresText = (_musteriAdres ?? '').trim();
+    if (musteriAdresText.isEmpty) {
+      musteriAdresText = 'Belirtilmedi';
+    }
+
+    final infoRows = [
+      ('Sipariş No', widget.siparisId != null ? '#${widget.siparisId}' : '-'),
+      ('Müşteri', _musteriAdi),
+      ('Telefon', _musteriTelefon),
+      ('Adres', musteriAdresText),
+      ('Sipariş Tipi', _formatSiparisTipi(_siparisTipi)),
+      ('Ödeme Tipi', _formatOdemeTipi(_odemeTipi)),
+    ];
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: primaryText,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        ),
+        title: const Text(
+          'Sipariş Durumu',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: primaryText,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: const BoxDecoration(
+                        color: primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Siparişiniz Başarıyla Alındı',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 26,
+                      height: 1.2,
+                      fontWeight: FontWeight.w800,
+                      color: primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Restoran siparişinizi onayladı.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: secondaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _card(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.schedule_rounded,
+                            color: primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Tahmini Teslimat',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: secondaryText,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                teslimSuresi,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primary,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            widget.siparisId == null ? 'Statik' : 'Canlı',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Sipariş Durumu',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Anlık Durum: $_durumMetni',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...List.generate(statusItems.length, (index) {
+                          final isDone = statusItems[index].$2;
+                          final isLast = index == statusItems.length - 1;
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 28,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: isDone ? primary : Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDone
+                                              ? primary
+                                              : const Color(0xFFD1D5DB),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        isDone
+                                            ? Icons.check_rounded
+                                            : _statusIcon(
+                                                statusItems[index].$1,
+                                              ),
+                                        size: isDone ? 15 : 12,
+                                        color: isDone
+                                            ? Colors.white
+                                            : secondaryText,
+                                      ),
+                                    ),
+                                    if (!isLast)
+                                      Container(
+                                        width: 2,
+                                        height: 34,
+                                        margin: const EdgeInsets.symmetric(
+                                          vertical: 4,
+                                        ),
+                                        color: isDone
+                                            ? primary
+                                            : const Color(0xFFE5E7EB),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  statusItems[index].$1,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 15,
+                                    fontWeight: isDone
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: isDone ? primaryText : secondaryText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.badge_rounded, color: primary),
+                            SizedBox(width: 8),
+                            Text(
+                              'Müşteri Bilgileri',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: primaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        ...infoRows.map((row) {
+                          final isAddress = row.$1 == 'Adres';
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: isAddress ? 14 : 10,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Icon(
+                                    _infoIcon(row.$1),
+                                    size: 16,
+                                    color: secondaryText,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        row.$1,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: secondaryText,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        row.$2,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: primaryText,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.fastfood_rounded, color: primary),
+                            SizedBox(width: 8),
+                            Text(
+                              'Sipariş Ürünleri',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: primaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        ..._urunler.map((item) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xFFEDEDED),
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.ramen_dining_rounded,
+                                    color: Color(0xFF6B7280),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.urunAdi,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: primaryText,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '${item.adet} x',
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: secondaryText,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${item.satirToplami.toStringAsFixed(2)} ₺',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: primaryText,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.summarize_rounded, color: primary),
+                            SizedBox(width: 8),
+                            Text(
+                              'Ödeme Özeti',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: primaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _priceRow('Ara Toplam', _araToplam),
+                        _priceRow('Teslimat', _teslimatUcreti),
+                        _priceRow('İndirim', indirim),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: Divider(height: 1, color: Color(0xFFE8E8E8)),
+                        ),
+                        Row(
+                          children: [
+                            const Text(
+                              'Toplam',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: primaryText,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${(_toplamTutar - indirim).toStringAsFixed(2)} ₺',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                                color: primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _refreshOrderStatus,
+                      icon: const Icon(Icons.my_location_rounded, size: 20),
+                      label: Text(
+                        _isRefreshing
+                            ? 'Güncelleniyor...'
+                            : 'Siparişi Takip Et',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        disabledBackgroundColor: primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                          return;
+                        }
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const MenuScreen()),
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(Icons.home_rounded, size: 20),
+                      label: const Text(
+                        'Ana Sayfaya Dön',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryText,
+                        side: const BorderSide(color: Color(0xFFE8E8E8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _priceRow(String title, double amount, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              color: const Color(0xFF6B7280),
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '${amount.toStringAsFixed(2)} ₺',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              color: const Color(0xFF111827),
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

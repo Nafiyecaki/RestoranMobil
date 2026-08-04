@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/sepet_item.dart';
 import '../models/urun.dart';
+import '../providers/theme_provider.dart';
 import '../models/user_model.dart';
 import '../providers/sepet_provider.dart';
 import '../services/api_service.dart';
@@ -14,10 +15,21 @@ import '../widgets/app_bottom_nav.dart';
 import 'address_list_screen.dart';
 import 'login_screen.dart';
 import 'menu_screen.dart';
+import 'profile_edit_screen.dart';
+import 'profile_favorites_screen.dart';
+import 'profile_who_we_are_screen.dart';
 import 'sepet_screen.dart';
+import 'siparis_ozet_screen.dart';
+
+enum ProfileBackTarget { menu, sepet }
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final ProfileBackTarget geriDonusHedefi;
+
+  const ProfileScreen({
+    super.key,
+    this.geriDonusHedefi = ProfileBackTarget.menu,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -27,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _primaryColor = Color(0xFF2E7D32);
   static const Color _secondaryColor = Color(0xFF66BB6A);
   static const Color _accentColor = Color(0xFF1B5E20);
+  final ScrollController _profileScrollController = ScrollController();
 
   User? _user;
 
@@ -42,15 +55,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _errorMessage;
   bool _pushNotificationsEnabled = true;
   bool _emailNotificationsEnabled = true;
-  String _language = 'TR';
-  String _themeMode = 'Sistem';
   final List<Map<String, dynamic>> _orders = [];
   final List<Map<String, dynamic>> _orderHistory = [];
+  List<Urun> _tumUrunler = [];
+  List<Map<String, String>> _whoWeAreMembers = [
+    {'name': 'Ekip Üyesi 1', 'role': 'Mobil Uygulama Geliştirme'},
+    {'name': 'Ekip Üyesi 2', 'role': 'Backend ve API Entegrasyonu'},
+    {'name': 'Ekip Üyesi 3', 'role': 'UI/UX Tasarım'},
+    {'name': 'Ekip Üyesi 4', 'role': 'Sipariş ve Operasyon Akışı'},
+    {'name': 'Ekip Üyesi 5', 'role': 'Test ve Kalite Kontrol'},
+  ];
 
-  late final TextEditingController _adiController;
-  late final TextEditingController _soyadiController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _telefonController;
   late final TextEditingController _eskiSifreController;
   late final TextEditingController _yeniSifreController;
   late final TextEditingController _yeniSifreTekrarController;
@@ -58,10 +73,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _adiController = TextEditingController();
-    _soyadiController = TextEditingController();
-    _emailController = TextEditingController();
-    _telefonController = TextEditingController();
     _eskiSifreController = TextEditingController();
     _yeniSifreController = TextEditingController();
     _yeniSifreTekrarController = TextEditingController();
@@ -70,10 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    _adiController.dispose();
-    _soyadiController.dispose();
-    _emailController.dispose();
-    _telefonController.dispose();
+    _profileScrollController.dispose();
     _eskiSifreController.dispose();
     _yeniSifreController.dispose();
     _yeniSifreTekrarController.dispose();
@@ -94,23 +102,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final profile = await ApiService.getProfile();
       final addresses = await ApiService.getAddresses();
+      final orders = await ApiService.getMyOrders();
+      final history = await ApiService.getOrderHistory();
+      final urunler = await ApiService.getUrunler();
       final prefs = await SharedPreferences.getInstance();
       final currentUser = await ApiService.getCurrentUser();
       final userId =
           currentUser?['userId']?.toString() ?? profile.uyeId.toString();
+      final whoWeAreRaw = prefs.getString('who_we_are_$userId');
+
+      final activeOrders = orders.where((order) {
+        final durum = (order['siparisDurumu'] ?? '').toString().toLowerCase();
+        return !(durum.contains('teslim') ||
+            durum.contains('iptal') ||
+            durum.contains('cancel'));
+      }).toList();
 
       if (!mounted) return;
       setState(() {
         _user = profile;
         _addresses = addresses;
+        _orders
+          ..clear()
+          ..addAll(activeOrders);
+        _orderHistory
+          ..clear()
+          ..addAll(history);
+        _tumUrunler = urunler;
         _defaultAddressId = prefs.getInt('default_address_$userId');
         _avatarBase64 = prefs.getString('avatar_$userId');
         _emailVerified = prefs.getBool('email_verified_$userId') ?? false;
         _phoneVerified = prefs.getBool('phone_verified_$userId') ?? false;
-        _adiController.text = profile.uyeAdi ?? '';
-        _soyadiController.text = profile.uyeSoyadi ?? '';
-        _emailController.text = profile.uyeEmail ?? '';
-        _telefonController.text = profile.uyeTelefon ?? '';
+        if (whoWeAreRaw != null && whoWeAreRaw.isNotEmpty) {
+          final decoded = jsonDecode(whoWeAreRaw);
+          if (decoded is List) {
+            _whoWeAreMembers = decoded
+                .whereType<Map>()
+                .map(
+                  (item) => {
+                    'name': item['name']?.toString() ?? '',
+                    'role': item['role']?.toString() ?? '',
+                  },
+                )
+                .where((item) => item['name']!.isNotEmpty)
+                .toList();
+          }
+        }
         _isLoading = false;
         _isRefreshing = false;
       });
@@ -163,16 +200,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.setBool('$keyPrefix$userId', value);
   }
 
-  Future<void> _saveInt(String keyPrefix, int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentUser = await ApiService.getCurrentUser();
-    final userId =
-        currentUser?['userId']?.toString() ??
-        _user?.uyeId.toString() ??
-        'guest';
-    await prefs.setInt('$keyPrefix$userId', value);
-  }
-
   Future<void> _saveString(String keyPrefix, String value) async {
     final prefs = await SharedPreferences.getInstance();
     final currentUser = await ApiService.getCurrentUser();
@@ -183,149 +210,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.setString('$keyPrefix$userId', value);
   }
 
-  Future<void> _clearDefaultAddress() async {
+  Future<void> _saveWhoWeAreMembers() async {
     final prefs = await SharedPreferences.getInstance();
     final currentUser = await ApiService.getCurrentUser();
     final userId =
         currentUser?['userId']?.toString() ??
         _user?.uyeId.toString() ??
         'guest';
-    await prefs.remove('default_address_$userId');
+    await prefs.setString('who_we_are_$userId', jsonEncode(_whoWeAreMembers));
   }
 
-  Future<void> _openEditProfileSheet() async {
-    _adiController.text = _user?.uyeAdi ?? '';
-    _soyadiController.text = _user?.uyeSoyadi ?? '';
-    _emailController.text = _user?.uyeEmail ?? '';
-    _telefonController.text = _user?.uyeTelefon ?? '';
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Profili Düzenle',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                _sheetTextField(
-                  controller: _adiController,
-                  label: 'Ad',
-                  icon: Icons.person_outline,
-                ),
-                const SizedBox(height: 12),
-                _sheetTextField(
-                  controller: _soyadiController,
-                  label: 'Soyad',
-                  icon: Icons.person_outline,
-                ),
-                const SizedBox(height: 12),
-                _sheetTextField(
-                  controller: _emailController,
-                  label: 'E-posta',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                _sheetTextField(
-                  controller: _telefonController,
-                  label: 'Telefon',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      await _updateProfile();
-                      if (navigator.mounted) {
-                        navigator.pop();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Kaydet'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Future<void> _openEditProfilePage() async {
+    if (_user == null) return;
+
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => ProfileEditScreen(user: _user!)),
     );
-  }
 
-  Widget _sheetTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Future<void> _updateProfile() async {
-    try {
-      final result = await ApiService.updateProfile(
-        adi: _adiController.text.trim(),
-        soyadi: _soyadiController.text.trim(),
-        telefon: _telefonController.text.trim(),
-      );
-
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        setState(() {
-          if (_user != null) {
-            _user = User(
-              uyeId: _user!.uyeId,
-              uyeAdi: _adiController.text.trim(),
-              uyeSoyadi: _soyadiController.text.trim(),
-              uyeEmail: _emailController.text.trim(),
-              uyeTelefon: _telefonController.text.trim(),
-              cinsiyet: _user!.cinsiyet,
-              kayitTarihi: _user!.kayitTarihi,
-              adresler: _user!.adresler,
-            );
-          }
-        });
-        _showSnackBar('✅ Profil güncellendi', Colors.green);
-      } else {
-        _showSnackBar(result['message'] ?? 'Profil güncellenemedi', Colors.red);
-      }
-    } catch (e) {
-      _showSnackBar('❌ Profil güncellenirken hata oluştu: $e', Colors.red);
+    if (updated == true) {
+      await _loadProfileData();
+      _showSnackBar('✅ Profil güncellendi', Colors.green);
     }
+  }
+
+  Future<void> _openFavoritesPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileFavoritesScreen(products: _tumUrunler),
+      ),
+    );
+  }
+
+  Future<void> _openWhoWeArePage() async {
+    final updatedMembers = await Navigator.push<List<Map<String, String>>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileWhoWeAreScreen(initialMembers: _whoWeAreMembers),
+      ),
+    );
+
+    if (updatedMembers == null) return;
+
+    setState(() {
+      _whoWeAreMembers = updatedMembers;
+    });
+    await _saveWhoWeAreMembers();
   }
 
   Future<void> _changePassword() async {
@@ -376,273 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _saveBool('phone_verified_', value);
   }
 
-  Future<void> _openAddressForm({Address? existingAddress}) async {
-    final titleController = TextEditingController(
-      text: existingAddress?.adresTipi ?? 'Ev',
-    );
-    final detailController = TextEditingController(
-      text: existingAddress?.acikAdres ?? '',
-    );
-    final cityController = TextEditingController();
-    final districtController = TextEditingController();
-    final mapController = TextEditingController();
-
-    String selectedType = _normalizeAddressType(existingAddress?.adresTipi);
-    bool inDeliveryZone = existingAddress?.teslimatBolgesindeMi ?? false;
-    bool isDefault = _defaultAddressId == existingAddress?.adresId;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      existingAddress == null
-                          ? 'Yeni Adres Ekle'
-                          : 'Adresi Düzenle',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      children: ['Ev', 'İş', 'Diğer'].map((label) {
-                        final isSelected = selectedType == label;
-                        return ChoiceChip(
-                          label: Text(label),
-                          selected: isSelected,
-                          selectedColor: _secondaryColor.withValues(
-                            alpha: 0.25,
-                          ),
-                          onSelected: (_) {
-                            setSheetState(() {
-                              selectedType = label;
-                              titleController.text = label;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    _sheetTextField(
-                      controller: titleController,
-                      label: 'Adres Başlığı',
-                      icon: Icons.label_outline,
-                    ),
-                    const SizedBox(height: 12),
-                    _sheetTextField(
-                      controller: cityController,
-                      label: 'İl',
-                      icon: Icons.location_city_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    _sheetTextField(
-                      controller: districtController,
-                      label: 'İlçe',
-                      icon: Icons.map_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    _sheetTextField(
-                      controller: mapController,
-                      label: 'Harita Konumu (örn: 40.19,29.06)',
-                      icon: Icons.pin_drop_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: detailController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Açık Adres',
-                        prefixIcon: const Icon(Icons.home_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      activeThumbColor: _primaryColor,
-                      activeTrackColor: _secondaryColor.withValues(alpha: 0.45),
-                      title: const Text('Teslimat bölgesinde'),
-                      value: inDeliveryZone,
-                      onChanged: (v) => setSheetState(() => inDeliveryZone = v),
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      activeThumbColor: _primaryColor,
-                      activeTrackColor: _secondaryColor.withValues(alpha: 0.45),
-                      title: const Text('Varsayılan adres yap'),
-                      value: isDefault,
-                      onChanged: (v) => setSheetState(() => isDefault = v),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (detailController.text.trim().isEmpty) {
-                            _showSnackBar(
-                              'Adres alanı boş bırakılamaz',
-                              Colors.orange,
-                            );
-                            return;
-                          }
-
-                          final sheetNavigator = Navigator.of(context);
-
-                          try {
-                            final header = titleController.text.trim().isEmpty
-                                ? selectedType
-                                : titleController.text.trim();
-                            final location =
-                                '${cityController.text.trim()} / ${districtController.text.trim()}';
-                            final mapPart = mapController.text.trim().isEmpty
-                                ? ''
-                                : '\nKonum: ${mapController.text.trim()}';
-                            final fullAddress =
-                                '${detailController.text.trim()}\n$location$mapPart';
-
-                            final result = await ApiService.addAddress(
-                              adresTipi: header,
-                              acikAdres: fullAddress,
-                              teslimatBolgesindeMi: inDeliveryZone,
-                            );
-
-                            if (result['success'] != true) {
-                              _showSnackBar(
-                                result['message'] ?? 'Adres kaydedilemedi',
-                                Colors.red,
-                              );
-                              return;
-                            }
-
-                            if (existingAddress != null) {
-                              await ApiService.deleteAddress(
-                                existingAddress.adresId,
-                              );
-                            }
-
-                            await _loadProfileData();
-
-                            if (isDefault) {
-                              final latest = _addresses.isEmpty
-                                  ? null
-                                  : _addresses.last;
-                              if (latest != null) {
-                                await _setDefaultAddress(latest.adresId);
-                              }
-                            }
-
-                            if (sheetNavigator.mounted) {
-                              sheetNavigator.pop();
-                            }
-                            _showSnackBar('✅ Adres kaydedildi', Colors.green);
-                          } catch (e) {
-                            _showSnackBar(
-                              '❌ Adres kaydedilirken hata oluştu: $e',
-                              Colors.red,
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          existingAddress == null ? 'Adresi Ekle' : 'Kaydet',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _normalizeAddressType(String? raw) {
-    final value = (raw ?? '').toLowerCase();
-    if (value.contains('iş') || value.contains('is')) return 'İş';
-    if (value.contains('diğer') || value.contains('diger')) return 'Diğer';
-    return 'Ev';
-  }
-
-  Future<void> _setDefaultAddress(int addressId) async {
-    if (!mounted) return;
-    setState(() => _defaultAddressId = addressId);
-    await _saveInt('default_address_', addressId);
-  }
-
-  Future<void> _deleteAddress(Address address) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Adresi Sil'),
-          content: const Text('Bu adresi silmek istediğinize emin misiniz?'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Vazgeç'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Sil'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm != true) return;
-
-    try {
-      final result = await ApiService.deleteAddress(address.adresId);
-      if (result['success'] == true) {
-        if (_defaultAddressId == address.adresId) {
-          await _clearDefaultAddress();
-        }
-        await _loadProfileData();
-        _showSnackBar('✅ Adres silindi', Colors.green);
-      } else {
-        _showSnackBar('❌ Adres silinemedi', Colors.red);
-      }
-    } catch (e) {
-      _showSnackBar('❌ Adres silinirken hata oluştu: $e', Colors.red);
-    }
-  }
-
-  int _statusStep(String? status) {
+  static int _statusStep(String? status) {
     final s = (status ?? '').toLowerCase();
     if (s.contains('teslim')) return 3;
     if (s.contains('yolda') || s.contains('dağıtım') || s.contains('dagitim')) {
@@ -688,6 +353,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } catch (e) {
       _showSnackBar('❌ Sipariş detayı açılamadı: $e', Colors.red);
+    }
+  }
+
+  Future<void> _openOrderStatus(Map<String, dynamic> order) async {
+    try {
+      final items = _extractOrderItems(order)
+          .map(
+            (item) => SiparisOzetItemData(
+              urunAdi: item.ad,
+              adet: item.adet,
+              birimFiyat: item.fiyat,
+            ),
+          )
+          .toList();
+
+      final siparisTipi = (order['siparisTipi'] ?? 'PAKET_SERVIS').toString();
+      final odemeTipi =
+          (order['odemeTipi'] ??
+                  order['odemeTuru'] ??
+                  order['odemeYontemi'] ??
+                  'KAPIDA_ODEME')
+              .toString();
+
+      final teslimatUcreti =
+          (order['teslimatUcreti'] as num?)?.toDouble() ??
+          (siparisTipi == 'SALON' ? 0.0 : 9.99);
+
+      final itemsToplam = items.fold<double>(
+        0,
+        (sum, item) => sum + item.satirToplami,
+      );
+
+      final toplamTutar =
+          (order['toplamTutar'] as num?)?.toDouble() ??
+          (itemsToplam + teslimatUcreti);
+      final araToplam = items.isNotEmpty
+          ? itemsToplam
+          : (toplamTutar - teslimatUcreti).clamp(0.0, double.infinity);
+
+      final fallbackName = '${_user?.uyeAdi ?? ''} ${_user?.uyeSoyadi ?? ''}'
+          .trim();
+      final defaultAddress = _addresses
+          .where((a) => a.adresId == _defaultAddressId)
+          .cast<Address?>()
+          .firstWhere(
+            (a) => a != null,
+            orElse: () => _addresses.isNotEmpty ? _addresses.first : null,
+          )
+          ?.acikAdres;
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SiparisOzetScreen(
+            siparisId: (order['siparisId'] as num?)?.toInt(),
+            siparisTipi: siparisTipi,
+            odemeTipi: odemeTipi,
+            initialDurum: order['siparisDurumu']?.toString(),
+            musteriAdi:
+                (order['musteriAdi']?.toString().trim().isNotEmpty ?? false)
+                ? order['musteriAdi'].toString()
+                : (fallbackName.isNotEmpty ? fallbackName : 'Müşteri'),
+            musteriTelefon:
+                (order['musteriTelefon'] ?? _user?.uyeTelefon ?? '-')
+                    .toString(),
+            musteriAdres: (order['musteriAdres'] ?? defaultAddress ?? '-')
+                .toString(),
+            urunler: items,
+            araToplam: araToplam,
+            teslimatUcreti: teslimatUcreti,
+            toplamTutar: toplamTutar,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showSnackBar('❌ Sipariş durumu açılamadı: $e', Colors.red);
     }
   }
 
@@ -823,6 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sepetProvider = context.watch<SepetProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -876,6 +620,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onRefresh: _handleRefresh,
                     color: _primaryColor,
                     child: SingleChildScrollView(
+                      controller: _profileScrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -887,6 +632,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildOrdersSection(isDark),
                           const SizedBox(height: 16),
                           _buildOrderHistorySection(isDark),
+                          const SizedBox(height: 16),
+                          _buildFavoritesSection(isDark, sepetProvider),
+                          const SizedBox(height: 16),
+                          _buildWhoWeAreSection(isDark),
                           const SizedBox(height: 16),
                           _buildSettingsSection(isDark),
                           const SizedBox(height: 16),
@@ -1078,7 +827,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: _primaryColor,
                     size: 22,
                   ),
-                  onPressed: _openEditProfileSheet,
+                  onPressed: _openEditProfilePage,
                 ),
               ),
             ],
@@ -1382,110 +1131,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildOrdersSection(bool isDark) {
     return _buildCardShell(
       isDark: isDark,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: InkWell(
+        onTap: _orders.isEmpty ? null : _openAllActiveOrders,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(
             children: [
-              const Icon(
-                Icons.receipt_long_outlined,
-                color: _primaryColor,
-                size: 22,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Aktif Siparişlerim',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-              if (_orders.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_orders.length}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_orders.isEmpty)
-            _buildEmptyStateCard(
-              icon: Icons.delivery_dining_outlined,
-              text: 'Aktif siparişiniz yok',
-              isDark: isDark,
-            )
-          else
-            ..._orders.map((order) {
-              final step = _statusStep(order['siparisDurumu']?.toString());
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
+              Container(
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.03)
-                      : _primaryColor.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(12),
+                  color: _primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Icon(
+                  Icons.receipt_long_outlined,
+                  color: _primaryColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Text(
-                          '#${order['siparisId'] ?? '-'}',
+                          'Aktif Siparişlerim',
                           style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black87,
-                            fontSize: 14,
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          '${order['toplamTutar'] ?? '-'} ₺',
-                          style: const TextStyle(
-                            color: _primaryColor,
-                            fontWeight: FontWeight.w700,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_orders.length}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
-                      order['siparisDurumu']?.toString() ?? 'Durum bekleniyor',
+                      _orders.isEmpty
+                          ? 'Aktif siparişiniz yok'
+                          : 'Sipariş durumlarını görmek için dokun',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _buildOrderProgress(step),
                   ],
                 ),
-              );
-            }),
-        ],
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: isDark ? Colors.grey[400] : Colors.grey,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildOrderProgress(int activeStep) {
+  Future<void> _openAllActiveOrders() async {
+    if (_orders.isEmpty) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ActiveOrdersScreen(orders: _orders, onOrderTap: _openOrderStatus),
+      ),
+    );
+  }
+
+  static Widget _buildOrderProgress(int activeStep) {
     const labels = ['Hazırlanıyor', 'Yolda', 'Teslim Edildi'];
     return Column(
       children: [
@@ -1541,134 +1278,177 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildOrderHistorySection(bool isDark) {
     return _buildCardShell(
       isDark: isDark,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: InkWell(
+        onTap: _orderHistory.isEmpty ? null : _openOrderHistoryScreen,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(
             children: [
-              const Icon(
-                Icons.history_outlined,
-                color: _primaryColor,
-                size: 22,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Sipariş Geçmişim',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: _secondaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Icon(
+                  Icons.history_outlined,
+                  color: _accentColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Sipariş Geçmişim',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _secondaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_orderHistory.length}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _accentColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _orderHistory.isEmpty
+                          ? 'Geçmiş siparişiniz yok'
+                          : 'Tüm geçmiş siparişleri görmek için dokun',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: isDark ? Colors.grey[400] : Colors.grey,
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (_orderHistory.isEmpty)
-            _buildEmptyStateCard(
-              icon: Icons.history_toggle_off,
-              text: 'Geçmiş siparişiniz yok',
-              isDark: isDark,
-            )
-          else
-            ..._orderHistory.take(6).map((order) {
-              return InkWell(
-                onTap: () => _openOrderDetail(order),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.03)
-                        : Colors.grey.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFavoritesSection(bool isDark, SepetProvider sepetProvider) {
+    final favoriteIds = sepetProvider.favoriler.toSet();
+    final favoriteProducts = _tumUrunler
+        .where((urun) => favoriteIds.contains(urun.urunId))
+        .toList();
+
+    return _buildCardShell(
+      isDark: isDark,
+      child: InkWell(
+        onTap: _openFavoritesPage,
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: _primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.favorite, color: _primaryColor, size: 28),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '#${order['siparisId'] ?? '-'}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${order['toplamTutar'] ?? '-'} ₺',
-                            style: const TextStyle(
-                              color: _primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Favorilerim',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              order['siparisDurumu']?.toString() ?? '-',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[700],
-                              ),
-                            ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${favoriteProducts.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryColor,
                           ),
-                          Text(
-                            _formatDate(order['siparisTarihi']?.toString()),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? Colors.grey[500]
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _openOrderDetail(order),
-                              icon: const Icon(Icons.open_in_new, size: 16),
-                              label: const Text('Detay'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _accentColor,
-                                side: BorderSide(
-                                  color: _secondaryColor.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _repeatOrder(order),
-                              icon: const Icon(Icons.replay, size: 16),
-                              label: const Text('Tekrar Sipariş Ver'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _primaryColor,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              );
-            }),
-        ],
+                  const SizedBox(height: 4),
+                  Text(
+                    favoriteProducts.isEmpty
+                        ? 'Favori urununuz yok'
+                        : 'Favori urunlerinizi gormek icin dokun',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openOrderHistoryScreen() async {
+    if (_orderHistory.isEmpty) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderHistoryScreen(
+          orders: _orderHistory,
+          onOrderDetail: _openOrderDetail,
+          onRepeatOrder: _repeatOrder,
+        ),
       ),
     );
   }
@@ -1722,21 +1502,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _saveBool('settings_email_', value);
             },
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(
-                Icons.language_outlined,
-                color: _primaryColor,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              const Text('Dil', style: TextStyle(fontWeight: FontWeight.w600)),
-              const Spacer(),
-              _buildLanguageToggle(),
-            ],
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               const Icon(
@@ -1755,73 +1520,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// SegmentedButton bazı ortamlarda (özellikle web/masaüstü Electron
-  /// görünümlerinde) beklenmedik şekilde tıklamaları yakalamayabiliyor.
-  /// Bunun yerine iki ayrı, garanti çalışan buton kullanıyoruz.
-  Widget _buildLanguageToggle() {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: _secondaryColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _secondaryColor.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _languageOptionButton(code: 'TR', label: 'TR'),
-          _languageOptionButton(code: 'EN', label: 'EN'),
-        ],
-      ),
-    );
-  }
-
-  Widget _languageOptionButton({required String code, required String label}) {
-    final isSelected = _language == code;
-    return Material(
-      color: Colors.transparent,
+  Widget _buildWhoWeAreSection(bool isDark) {
+    return _buildCardShell(
+      isDark: isDark,
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () async {
-          if (_language == code) return;
-          setState(() => _language = code);
-          await _saveString('settings_lang_', code);
-          _showSnackBar(
-            code == 'TR'
-                ? '✅ Dil Türkçe olarak ayarlandı'
-                : '✅ Language set to English',
-            Colors.green,
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? _primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isSelected) ...[
-                const Icon(Icons.check, size: 14, color: Colors.white),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : _accentColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
+        onTap: _openWhoWeArePage,
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: _primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
-          ),
+              child: const Icon(
+                Icons.groups_2_outlined,
+                color: _primaryColor,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Biz Kimiz',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_whoWeAreMembers.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ekip detaylarini gormek icin dokun',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildThemeDropdown() {
+    final themeProvider = context.watch<ThemeProvider>();
+    final selectedTheme = ThemeProvider.labelFromMode(themeProvider.themeMode);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -1831,15 +1611,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: _themeMode,
+          value: selectedTheme,
           items: const [
             DropdownMenuItem(value: 'Açık', child: Text('Açık')),
             DropdownMenuItem(value: 'Koyu', child: Text('Koyu')),
-            DropdownMenuItem(value: 'Sistem', child: Text('Sistem')),
           ],
           onChanged: (value) async {
             if (value == null) return;
-            setState(() => _themeMode = value);
+            await context.read<ThemeProvider>().setThemeModeByLabel(value);
             await _saveString('settings_theme_', value);
             _showSnackBar('✅ Tema: $value', Colors.green);
           },
@@ -1848,36 +1627,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  String _formatDate(String? raw) {
+  static String _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return '-';
     final date = DateTime.tryParse(raw)?.toLocal();
     if (date == null) return '-';
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
-  }
-
-  Widget _buildEmptyStateCard({
-    required IconData icon,
-    required String text,
-    required bool isDark,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.03)
-            : Colors.grey.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.grey, size: 26),
-          const SizedBox(height: 8),
-          Text(text, style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
   }
 
   Widget _buildStickyLogoutButton(bool isDark) {
@@ -1923,6 +1677,238 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class ActiveOrdersScreen extends StatelessWidget {
+  const ActiveOrdersScreen({
+    super.key,
+    required this.orders,
+    required this.onOrderTap,
+  });
+
+  final List<Map<String, dynamic>> orders;
+  final void Function(Map<String, dynamic> order) onOrderTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      appBar: AppBar(
+        title: const Text('Aktif Siparişlerim'),
+        backgroundColor: _ProfileScreenState._primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: orders.isEmpty
+          ? const Center(child: Text('Aktif siparişiniz yok'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                final step = _ProfileScreenState._statusStep(
+                  order['siparisDurumu']?.toString(),
+                );
+                return InkWell(
+                  onTap: () => onOrderTap(order),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _ProfileScreenState._primaryColor.withValues(
+                        alpha: 0.04,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '#${order['siparisId'] ?? '-'}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${order['toplamTutar'] ?? '-'} ₺',
+                              style: const TextStyle(
+                                color: _ProfileScreenState._primaryColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          order['siparisDurumu']?.toString() ??
+                              'Durum bekleniyor',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _ProfileScreenState._buildOrderProgress(step),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(
+                              Icons.visibility_outlined,
+                              size: 16,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Sipariş Durumuna Git',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class OrderHistoryScreen extends StatelessWidget {
+  const OrderHistoryScreen({
+    super.key,
+    required this.orders,
+    required this.onOrderDetail,
+    required this.onRepeatOrder,
+  });
+
+  final List<Map<String, dynamic>> orders;
+  final void Function(Map<String, dynamic> order) onOrderDetail;
+  final void Function(Map<String, dynamic> order) onRepeatOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      appBar: AppBar(
+        title: const Text('Sipariş Geçmişim'),
+        backgroundColor: _ProfileScreenState._primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: orders.isEmpty
+          ? const Center(child: Text('Geçmiş siparişiniz yok'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                return InkWell(
+                  onTap: () => onOrderDetail(order),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '#${order['siparisId'] ?? '-'}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${order['toplamTutar'] ?? '-'} ₺',
+                              style: const TextStyle(
+                                color: _ProfileScreenState._primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                order['siparisDurumu']?.toString() ?? '-',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            Text(
+                              _ProfileScreenState._formatDate(
+                                order['siparisTarihi']?.toString(),
+                              ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => onOrderDetail(order),
+                                icon: const Icon(Icons.open_in_new, size: 16),
+                                label: const Text('Detay'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor:
+                                      _ProfileScreenState._accentColor,
+                                  side: BorderSide(
+                                    color: _ProfileScreenState._secondaryColor
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => onRepeatOrder(order),
+                                icon: const Icon(Icons.replay, size: 16),
+                                label: const Text('Tekrar Sipariş Ver'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      _ProfileScreenState._primaryColor,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

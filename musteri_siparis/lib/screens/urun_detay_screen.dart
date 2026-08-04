@@ -193,6 +193,7 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
     required void Function(int urunId, bool secildi) onDegisti,
     required bool tumunuGoster,
     required VoidCallback onTumunuGosterToggle,
+    required bool isDark,
   }) {
     if (urunler.isEmpty) {
       return const SizedBox.shrink();
@@ -205,11 +206,16 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF171717) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2E2E2E) : Colors.transparent,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -223,10 +229,10 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
               Expanded(
                 child: Text(
                   baslik,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 34 / 2,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF202124),
+                    color: isDark ? Colors.white : const Color(0xFF202124),
                   ),
                 ),
               ),
@@ -253,7 +259,10 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
           const SizedBox(height: 4),
           Text(
             altBaslik,
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 10),
           ...gorunenListe.map((ekUrun) {
@@ -281,14 +290,19 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                   Expanded(
                     child: Text(
                       ekUrun.urunAdi,
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white : const Color(0xFF202124),
+                      ),
                     ),
                   ),
                   Text(
                     '+${_fiyatYaz(ekUrun.fiyat)} TL',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF5F6368),
+                      color: isDark
+                          ? Colors.grey[300]
+                          : const Color(0xFF5F6368),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -340,12 +354,17 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
   @override
   Widget build(BuildContext context) {
     final urun = widget.urun;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F2),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F0F)
+          : const Color(0xFFF6F6F2),
       appBar: AppBar(
         title: Text(urun.urunAdi),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: isDark
+            ? const Color(0xFF151515)
+            : const Color(0xFF2E7D32),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -382,23 +401,28 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                     const SizedBox(height: 14),
                     Text(
                       urun.urunAdi,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 40 / 2,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF202124),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${_fiyatYaz(urun.fiyat)} TL',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28 / 2,
                         fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF202124),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _kategoriAdi(urun.kategoriId),
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -407,7 +431,7 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                           : 'Bu ürün için açıklama bulunmuyor.',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.grey[700],
+                        color: isDark ? Colors.grey[300] : Colors.grey[700],
                         height: 1.45,
                       ),
                     ),
@@ -418,6 +442,7 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                       urunler: _tatliOnerileri,
                       seciliIds: _seciliTatliIds,
                       tumunuGoster: _tatliTumunuGoster,
+                      isDark: isDark,
                       onDegisti: (urunId, secildi) {
                         setState(() {
                           if (secildi) {
@@ -439,6 +464,7 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                       urunler: _icecekOnerileri,
                       seciliIds: _seciliIcecekIds,
                       tumunuGoster: _icecekTumunuGoster,
+                      isDark: isDark,
                       onDegisti: (urunId, secildi) {
                         setState(() {
                           if (secildi) {
@@ -458,17 +484,25 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                       margin: const EdgeInsets.only(top: 4),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF171717) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF2E2E2E)
+                              : Colors.transparent,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Ürün Notu',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF202124),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -477,9 +511,23 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                             maxLines: 2,
                             decoration: InputDecoration(
                               hintText: 'Örn: Soğansız, acısız, ekstra limon',
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : Colors.grey[600],
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF222222)
+                                  : Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
+                            ),
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF202124),
                             ),
                           ),
                         ],
@@ -493,7 +541,7 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
                   bottom: 0,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF151515) : Colors.white,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.07),
