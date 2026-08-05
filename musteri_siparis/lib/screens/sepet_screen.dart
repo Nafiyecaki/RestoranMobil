@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../models/user_model.dart'; // ✅ User model import
 import '../widgets/app_bottom_nav.dart';
 import 'odeme_screen.dart';
+import 'rezervasyon_screen.dart';
 import 'siparis_ozet_screen.dart';
 import 'menu_screen.dart';
 import 'profile_screen.dart';
@@ -32,10 +33,10 @@ class _SepetScreenState extends State<SepetScreen> {
   final List<Map<String, dynamic>> _siparisTipleri = [
     {'value': 'PAKET_SERVIS', 'label': '📦 Paket Servis'},
     {'value': 'GEL_AL', 'label': '🏃 Gel-Al'},
-    {'value': 'SALON', 'label': '🍽️ Salonda Ye'},
   ];
 
-  String _seciliOdemeTipi = 'KAPIDA_ODEME';
+  // Ödeme artık sadece kartla (online) yapılıyor, kapıda ödeme seçeneği yok.
+  final String _seciliOdemeTipi = 'ONLINE';
   bool _adresGoster = true;
 
   String _getResimDosyasi(String urunAdi) {
@@ -269,6 +270,13 @@ class _SepetScreenState extends State<SepetScreen> {
     if (index == 2) {
       Navigator.pushReplacement(
         context,
+        MaterialPageRoute(builder: (_) => const RezervasyonScreen()),
+      );
+      return;
+    }
+    if (index == 3) {
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(
           builder: (_) =>
               const ProfileScreen(geriDonusHedefi: ProfileBackTarget.sepet),
@@ -397,21 +405,7 @@ class _SepetScreenState extends State<SepetScreen> {
                     const SizedBox(height: 16),
                     _buildPaymentSummary(sepet, isDark, toplam, teslimatUcreti),
                     const SizedBox(height: 16),
-                    _buildDropdownRow(
-                      icon: Icons.payment,
-                      label: 'Ödeme Tipi',
-                      value: _seciliOdemeTipi,
-                      items: [
-                        {
-                          'value': 'KAPIDA_ODEME',
-                          'label': '💵 Kapıda Ödeme (Kurye)',
-                        },
-                        {'value': 'ONLINE', 'label': '📱 Online Ödeme'},
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _seciliOdemeTipi = value!),
-                      isDark: isDark,
-                    ),
+                    _buildPaymentTypeInfo(isDark),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -556,7 +550,7 @@ class _SepetScreenState extends State<SepetScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _navigateBackSafely,
             icon: const Icon(Icons.restaurant_menu),
             label: const Text('Menüye Dön'),
             style: ElevatedButton.styleFrom(
@@ -703,6 +697,45 @@ class _SepetScreenState extends State<SepetScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentTypeInfo(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.credit_card,
+            size: 20,
+            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Ödeme Tipi:',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '💳 Kart ile Ödeme',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
         ],

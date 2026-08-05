@@ -18,6 +18,7 @@ import 'menu_screen.dart';
 import 'profile_edit_screen.dart';
 import 'profile_favorites_screen.dart';
 import 'profile_who_we_are_screen.dart';
+import 'rezervasyon_screen.dart';
 import 'sepet_screen.dart';
 import 'siparis_ozet_screen.dart';
 
@@ -480,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _onBottomNavTap(int index) {
-    if (index == 2) return;
+    if (index == 3) return;
 
     if (index == 0) {
       Navigator.pushReplacement(
@@ -495,7 +496,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         context,
         MaterialPageRoute(builder: (_) => const SepetScreen()),
       );
+      return;
     }
+
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const RezervasyonScreen()),
+      );
+    }
+  }
+
+  void _navigateBackSafely() {
+    if (!mounted) return;
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    if (widget.geriDonusHedefi == ProfileBackTarget.sepet) {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const SepetScreen()));
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const MenuScreen()));
   }
 
   /// Çıkış yap: onay al, backend'e logout isteği gönder (varsa),
@@ -552,87 +581,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final sepetProvider = context.watch<SepetProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          '👤 Profilim',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBackSafely();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+        appBar: AppBar(
+          title: const Text(
+            '👤 Profilim',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
+          backgroundColor: _primaryColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.white,
+              size: 20,
+            ),
+            onPressed: _navigateBackSafely,
+          ),
+          actions: [
+            IconButton(
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _isRefreshing
+                  ? null
+                  : () => _loadProfileData(fromRefresh: true),
+            ),
+          ],
+          centerTitle: true,
         ),
-        backgroundColor: _primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _isRefreshing
-                ? null
-                : () => _loadProfileData(fromRefresh: true),
-          ),
-        ],
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? _buildLoading()
-          : _errorMessage != null
-          ? _buildError()
-          : Column(
-              children: [
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _handleRefresh,
-                    color: _primaryColor,
-                    child: SingleChildScrollView(
-                      controller: _profileScrollController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          _buildProfileCard(isDark),
-                          const SizedBox(height: 16),
-                          _buildAddressSection(isDark),
-                          const SizedBox(height: 16),
-                          _buildOrdersSection(isDark),
-                          const SizedBox(height: 16),
-                          _buildOrderHistorySection(isDark),
-                          const SizedBox(height: 16),
-                          _buildFavoritesSection(isDark, sepetProvider),
-                          const SizedBox(height: 16),
-                          _buildWhoWeAreSection(isDark),
-                          const SizedBox(height: 16),
-                          _buildSettingsSection(isDark),
-                          const SizedBox(height: 16),
-                        ],
+        body: _isLoading
+            ? _buildLoading()
+            : _errorMessage != null
+            ? _buildError()
+            : Column(
+                children: [
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      color: _primaryColor,
+                      child: SingleChildScrollView(
+                        controller: _profileScrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            _buildProfileCard(isDark),
+                            const SizedBox(height: 16),
+                            _buildAddressSection(isDark),
+                            const SizedBox(height: 16),
+                            _buildOrdersSection(isDark),
+                            const SizedBox(height: 16),
+                            _buildOrderHistorySection(isDark),
+                            const SizedBox(height: 16),
+                            _buildFavoritesSection(isDark, sepetProvider),
+                            const SizedBox(height: 16),
+                            _buildWhoWeAreSection(isDark),
+                            const SizedBox(height: 16),
+                            _buildSettingsSection(isDark),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                _buildStickyLogoutButton(isDark),
-              ],
-            ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 2,
-        onTap: _onBottomNavTap,
+                  _buildStickyLogoutButton(isDark),
+                ],
+              ),
+        bottomNavigationBar: AppBottomNav(
+          currentIndex: 3,
+          onTap: _onBottomNavTap,
+        ),
       ),
     );
   }

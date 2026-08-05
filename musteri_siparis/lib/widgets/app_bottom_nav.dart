@@ -29,6 +29,10 @@ class AppBottomNav extends StatelessWidget {
           icon: Icon(Icons.shopping_cart),
           label: 'Sepetim',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.event_seat),
+          label: 'Rezervasyon',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hesabım'),
       ],
     );

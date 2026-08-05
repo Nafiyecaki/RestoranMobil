@@ -6,6 +6,7 @@ import '../providers/sepet_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'profile_screen.dart';
+import 'rezervasyon_screen.dart';
 import 'sepet_screen.dart';
 import 'urun_detay_screen.dart';
 
@@ -122,6 +123,13 @@ class _MenuScreenState extends State<MenuScreen> {
       return;
     }
     if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const RezervasyonScreen()),
+      );
+      return;
+    }
+    if (index == 3) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

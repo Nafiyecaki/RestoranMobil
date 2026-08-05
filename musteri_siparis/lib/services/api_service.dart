@@ -208,6 +208,78 @@ class ApiService {
   }
 
   // ============================================================
+  // 🍽️ REZERVASYON OLUŞTUR
+  // ============================================================
+  static Future<Map<String, dynamic>> rezervasyonOlustur({
+    required String musteriAdi,
+    String? musteriSoyadi,
+    required String telefon,
+    required int kisiSayisi,
+    required DateTime tarihSaat,
+    String? aciklama,
+    int? uyeId,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {'Content-Type': 'application/json'};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final body = jsonEncode({
+        'musteriAdi': musteriAdi,
+        'musteriSoyadi': musteriSoyadi,
+        'telefon': telefon,
+        'kisiSayisi': kisiSayisi,
+        'tarihSaat': tarihSaat.toIso8601String(),
+        'aciklama': aciklama,
+        'rezervasyonTipi': 'WEB',
+        'uyeId': uyeId,
+      });
+
+      final response = await http
+          .post(Uri.parse('$baseUrl/Rezervasyon'), headers: headers, body: body)
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message':
+              (data is Map ? data['mesaj'] : null) ??
+              '✅ Rezervasyon talebiniz alındı!',
+        };
+      }
+
+      String detail = '';
+      try {
+        final errBody = jsonDecode(utf8.decode(response.bodyBytes));
+        if (errBody is Map) {
+          detail =
+              (errBody['mesaj'] ?? errBody['message'] ?? errBody['title'] ?? '')
+                  .toString();
+        }
+      } catch (_) {
+        // gövde JSON değilse sessizce geç
+      }
+
+      return {
+        'success': false,
+        'message': detail.isNotEmpty
+            ? '❌ $detail'
+            : '❌ Rezervasyon oluşturulamadı! Lütfen tekrar deneyin.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+      };
+    }
+  }
+
+  // ============================================================
   // 👤 KULLANICI PROFİLİ
   // ============================================================
   static Future<User> getProfile() async {
