@@ -280,6 +280,190 @@ class ApiService {
   }
 
   // ============================================================
+  // ↩️ İADE TALEBİ OLUŞTUR (tek ürün / sipariş kalemi için)
+  // ============================================================
+  // NOT: IadeDurumu bilinçli olarak hiç gönderilmiyor; backend bunu
+  // varsayılan "BEKLEMEDE" yapıyor. Müşteri kendi iadesini asla
+  // doğrudan onaylayamamalı — onay/red garson panelinden yapılır.
+  static Future<Map<String, dynamic>> iadeTalebiOlustur({
+    required int siparisDetayId,
+    required String iadeSebebi,
+    required double iadeTutari,
+  }) async {
+    try {
+      final token = await _getToken();
+      final headers = {'Content-Type': 'application/json'};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/Iade/siparis-iade'),
+            headers: headers,
+            body: jsonEncode({
+              'siparisDetayId': siparisDetayId,
+              'iadeSebebi': iadeSebebi,
+              'iadeTutari': iadeTutari,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message':
+              (data is Map ? data['mesaj'] : null) ??
+              '✅ İade talebiniz alındı, onay bekleniyor.',
+        };
+      }
+
+      String detail = '';
+      try {
+        final errBody = jsonDecode(utf8.decode(response.bodyBytes));
+        if (errBody is Map) {
+          detail =
+              (errBody['mesaj'] ?? errBody['message'] ?? errBody['title'] ?? '')
+                  .toString();
+        }
+      } catch (_) {}
+
+      return {
+        'success': false,
+        'message': detail.isNotEmpty
+            ? '❌ $detail'
+            : '❌ İade talebi oluşturulamadı.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+      };
+    }
+  }
+
+  // ============================================================
+  // ↩️ TÜM SİPARİŞ İÇİN İADE TALEBİ (siparişteki her kalem için ayrı talep)
+  // ============================================================
+  static Future<Map<String, dynamic>> siparisIadeTalebiOlustur({
+    required List<Map<String, dynamic>>
+    detaylar, // {siparisDetayId, satirToplami}
+    required String iadeSebebi,
+  }) async {
+    var basarili = 0;
+    final hatalar = <String>[];
+
+    for (final d in detaylar) {
+      final sonuc = await iadeTalebiOlustur(
+        siparisDetayId: d['siparisDetayId'] as int,
+        iadeSebebi: iadeSebebi,
+        iadeTutari: (d['satirToplami'] as num).toDouble(),
+      );
+      if (sonuc['success'] == true) {
+        basarili++;
+      } else {
+        hatalar.add(sonuc['message'].toString());
+      }
+    }
+
+    if (hatalar.isEmpty) {
+      return {
+        'success': true,
+        'message': '✅ Siparişteki $basarili ürün için iade talebi oluşturuldu.',
+      };
+    }
+
+    return {
+      'success': basarili > 0,
+      'message': basarili > 0
+          ? '⚠️ $basarili ürün için talep oluşturuldu, bazıları başarısız oldu.'
+          : '❌ İade talepleri oluşturulamadı.',
+      'hatalar': hatalar,
+    };
+  }
+
+  // ============================================================
+  // ↩️ İADELERİM (durum takibi)
+  // ============================================================
+  static Future<List<Map<String, dynamic>>> benimIadelerim() async {
+    try {
+      final token = await _getToken();
+      final headers = {'Content-Type': 'application/json'};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/Iade/benim-iadelerim'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ============================================================
+  // ❌ SİPARİŞ İPTAL ET
+  // ============================================================
+  static Future<Map<String, dynamic>> siparisIptalEt(int siparisId) async {
+    try {
+      final token = await _getToken();
+      final headers = {'Content-Type': 'application/json'};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/siparisler/$siparisId/iptal'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'data': data,
+          'message':
+              (data is Map ? data['mesaj'] : null) ?? '✅ Sipariş iptal edildi.',
+        };
+      }
+
+      String detail = '';
+      try {
+        final errBody = jsonDecode(utf8.decode(response.bodyBytes));
+        detail = errBody is Map
+            ? (errBody['mesaj'] ?? errBody['message'] ?? errBody['title'] ?? '')
+                  .toString()
+            : errBody.toString();
+      } catch (_) {}
+
+      return {
+        'success': false,
+        'message': detail.isNotEmpty
+            ? '❌ $detail'
+            : '❌ Sipariş iptal edilemedi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message':
+            '⚠️ Bağlantı hatası! Lütfen internet bağlantınızı kontrol edin.',
+      };
+    }
+  }
+
+  // ============================================================
   // 👤 KULLANICI PROFİLİ
   // ============================================================
   static Future<User> getProfile() async {

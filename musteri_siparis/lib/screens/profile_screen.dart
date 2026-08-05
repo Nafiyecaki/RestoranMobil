@@ -318,6 +318,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : int.tryParse(
                 (map['urunId'] ?? map['productId'] ?? '').toString(),
               ),
+        siparisDetayId: (map['siparisDetayId']) is num
+            ? (map['siparisDetayId']) as int
+            : int.tryParse((map['siparisDetayId'] ?? '').toString()),
         ad: (map['urunAdi'] ?? map['name'] ?? 'Ürün').toString(),
         adet: qty.toInt(),
         fiyat: price.toDouble(),
@@ -2050,7 +2053,7 @@ class OrderHistoryScreen extends StatelessWidget {
   }
 }
 
-class OrderDetailScreen extends StatelessWidget {
+class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
     super.key,
     required this.order,
@@ -2061,7 +2064,217 @@ class OrderDetailScreen extends StatelessWidget {
   final List<OrderItemData> items;
 
   @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  // siparisDetayId -> {'durum': 'BEKLEMEDE'|'ONAYLANDI'|'REDDEDILDI'}
+  final Map<int, String> _iadeDurumlari = {};
+  bool _isLoadingIadeler = true;
+  int? _islemdekiDetayId;
+  bool _tumSiparisIsleniyor = false;
+
+  static const Color _primaryColor = Color(0xFF2E7D32);
+
+  bool get _siparisIadeyeUygun {
+    final durum = (widget.order['siparisDurumu'] ?? '')
+        .toString()
+        .toUpperCase();
+    return !durum.contains('IPTAL') &&
+        !durum.contains('IADE') &&
+        widget.items.isNotEmpty;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _iadeDurumlariniYukle();
+  }
+
+  Future<void> _iadeDurumlariniYukle() async {
+    try {
+      final iadeler = await ApiService.benimIadelerim();
+      final siparisId = (widget.order['siparisId'] as num?)?.toInt();
+      if (!mounted) return;
+      setState(() {
+        for (final iade in iadeler) {
+          final iadeSiparisId = (iade['siparisId'] as num?)?.toInt();
+          final detayId = (iade['siparisDetayId'] as num?)?.toInt();
+          final durum = (iade['iadeDurumu'] ?? '').toString().toUpperCase();
+          if (iadeSiparisId == siparisId &&
+              detayId != null &&
+              durum != 'REDDEDILDI') {
+            _iadeDurumlari[detayId] = durum;
+          }
+        }
+        _isLoadingIadeler = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingIadeler = false);
+    }
+  }
+
+  Future<String?> _iadeSebebiSor() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('İade Sebebi'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Örn: Ürün soğuk geldi, yanlış ürün geldi...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final metin = controller.text.trim();
+              Navigator.pop(
+                dialogContext,
+                metin.isEmpty ? 'Müşteri iade talep etti' : metin,
+              );
+            },
+            child: const Text('Talebi Gönder'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _tekUrunIadeTalebi(OrderItemData item) async {
+    if (item.siparisDetayId == null) {
+      _showSnackBar('❌ Bu ürün için iade talebi oluşturulamıyor.', Colors.red);
+      return;
+    }
+
+    final sebep = await _iadeSebebiSor();
+    if (sebep == null) return;
+
+    setState(() => _islemdekiDetayId = item.siparisDetayId);
+
+    final sonuc = await ApiService.iadeTalebiOlustur(
+      siparisDetayId: item.siparisDetayId!,
+      iadeSebebi: sebep,
+      iadeTutari: item.fiyat * item.adet,
+    );
+
+    if (!mounted) return;
+    setState(() => _islemdekiDetayId = null);
+
+    if (sonuc['success'] == true) {
+      setState(() => _iadeDurumlari[item.siparisDetayId!] = 'BEKLEMEDE');
+      _showSnackBar('✅ İade talebiniz alındı, onay bekleniyor.', Colors.green);
+    } else {
+      _showSnackBar(
+        (sonuc['message'] ?? 'İade talebi başarısız').toString(),
+        Colors.red,
+      );
+    }
+  }
+
+  Future<void> _tumSiparisIadeTalebi() async {
+    final iadeEdilebilirler = widget.items
+        .where(
+          (i) =>
+              i.siparisDetayId != null &&
+              !_iadeDurumlari.containsKey(i.siparisDetayId),
+        )
+        .toList();
+
+    if (iadeEdilebilirler.isEmpty) {
+      _showSnackBar('İade edilebilecek yeni ürün kalmadı.', Colors.orange);
+      return;
+    }
+
+    final sebep = await _iadeSebebiSor();
+    if (sebep == null) return;
+
+    setState(() => _tumSiparisIsleniyor = true);
+
+    final sonuc = await ApiService.siparisIadeTalebiOlustur(
+      detaylar: iadeEdilebilirler
+          .map(
+            (i) => {
+              'siparisDetayId': i.siparisDetayId,
+              'satirToplami': i.fiyat * i.adet,
+            },
+          )
+          .toList(),
+      iadeSebebi: sebep,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _tumSiparisIsleniyor = false;
+      for (final i in iadeEdilebilirler) {
+        _iadeDurumlari[i.siparisDetayId!] = 'BEKLEMEDE';
+      }
+    });
+
+    _showSnackBar(
+      (sonuc['message'] ?? '').toString(),
+      sonuc['success'] == true ? Colors.green : Colors.red,
+    );
+  }
+
+  Widget _iadeDurumRozeti(String durum) {
+    Color renk;
+    String metin;
+    switch (durum) {
+      case 'ONAYLANDI':
+        renk = Colors.green;
+        metin = 'İade Onaylandı';
+        break;
+      default:
+        renk = Colors.orange;
+        metin = 'İade Beklemede';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: renk.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        metin,
+        style: TextStyle(
+          color: renk,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final order = widget.order;
+    final items = widget.items;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Sipariş #${order['siparisId'] ?? '-'}'),
@@ -2097,9 +2310,30 @@ class OrderDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Ürünler',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Ürünler',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (!_isLoadingIadeler && _siparisIadeyeUygun)
+                  TextButton.icon(
+                    onPressed: _tumSiparisIsleniyor
+                        ? null
+                        : _tumSiparisIadeTalebi,
+                    icon: _tumSiparisIsleniyor
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.assignment_return, size: 18),
+                    label: const Text('Tüm Siparişi İade Et'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  ),
+              ],
             ),
             const SizedBox(height: 10),
             Expanded(
@@ -2114,6 +2348,13 @@ class OrderDetailScreen extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final item = items[index];
                         final total = item.fiyat * item.adet;
+                        final detayId = item.siparisDetayId;
+                        final iadeDurumu = detayId != null
+                            ? _iadeDurumlari[detayId]
+                            : null;
+                        final islemSuruyor =
+                            detayId != null && _islemdekiDetayId == detayId;
+
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -2122,27 +2363,65 @@ class OrderDetailScreen extends StatelessWidget {
                               color: Colors.grey.withValues(alpha: 0.2),
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  item.ad,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.ad,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  Text(
+                                    '${item.adet} x ${item.fiyat.toStringAsFixed(2)}',
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${total.toStringAsFixed(2)} ₺',
+                                    style: const TextStyle(
+                                      color: _ProfileScreenState._primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '${item.adet} x ${item.fiyat.toStringAsFixed(2)}',
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${total.toStringAsFixed(2)} ₺',
-                                style: const TextStyle(
-                                  color: _ProfileScreenState._primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              if (_siparisIadeyeUygun &&
+                                  !_isLoadingIadeler) ...[
+                                const SizedBox(height: 8),
+                                if (iadeDurumu != null)
+                                  _iadeDurumRozeti(iadeDurumu)
+                                else
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed:
+                                          (islemSuruyor || detayId == null)
+                                          ? null
+                                          : () => _tekUrunIadeTalebi(item),
+                                      icon: islemSuruyor
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.assignment_return,
+                                              size: 16,
+                                            ),
+                                      label: const Text('İade Talep Et'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ],
                           ),
                         );
@@ -2159,12 +2438,14 @@ class OrderDetailScreen extends StatelessWidget {
 class OrderItemData {
   const OrderItemData({
     this.urunId,
+    this.siparisDetayId,
     required this.ad,
     required this.adet,
     required this.fiyat,
   });
 
   final int? urunId;
+  final int? siparisDetayId;
   final String ad;
   final int adet;
   final double fiyat;

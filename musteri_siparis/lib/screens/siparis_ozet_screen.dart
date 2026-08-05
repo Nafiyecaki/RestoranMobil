@@ -64,9 +64,11 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
   late double _toplamTutar;
 
   String _durumMetni = 'Sipariş Alındı';
+  String? _rawDurum;
   Timer? _pollTimer;
   bool _isRefreshing = false;
   bool _hasFirstSync = false;
+  bool _isCanceling = false;
 
   @override
   void initState() {
@@ -81,6 +83,7 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
     _teslimatUcreti = widget.teslimatUcreti;
     _toplamTutar = widget.toplamTutar;
     _durumMetni = _friendlyStatusText(widget.initialDurum);
+    _rawDurum = widget.initialDurum;
 
     if (widget.siparisId != null) {
       _refreshOrderStatus();
@@ -287,6 +290,7 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
 
       setState(() {
         _durumMetni = newStatus;
+        _rawDurum = rawStatus;
         _siparisTipi = newSiparisTipi;
         _odemeTipi = newOdemeTipi;
         _musteriAdi =
@@ -324,6 +328,86 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
       // Sessizce geç: otomatik yenileme bir sonraki döngüde tekrar deneyecek.
     } finally {
       _isRefreshing = false;
+    }
+  }
+
+  bool get _iptalEdildi => (_rawDurum ?? '').toUpperCase().contains('IPTAL');
+
+  bool get _siparisIptalEdilebilir {
+    if (widget.siparisId == null) return false;
+    final s = (_rawDurum ?? '').toUpperCase();
+    const iptalEdilemeyenler = [
+      'TAMAMLANDI',
+      'ODENDI',
+      'IPTAL',
+      'TESLIM EDILDI',
+      'IADE',
+      'KISMI_IADE',
+    ];
+    return !iptalEdilemeyenler.any((d) => s.contains(d));
+  }
+
+  Future<void> _siparisiIptalEt() async {
+    if (widget.siparisId == null || _isCanceling) return;
+
+    final onay = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Siparişi İptal Et'),
+        content: const Text(
+          'Bu siparişi iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Evet, İptal Et'),
+          ),
+        ],
+      ),
+    );
+
+    if (onay != true || !mounted) return;
+
+    setState(() => _isCanceling = true);
+
+    final sonuc = await ApiService.siparisIptalEt(widget.siparisId!);
+
+    if (!mounted) return;
+    setState(() => _isCanceling = false);
+
+    if (sonuc['success'] == true) {
+      _pollTimer?.cancel();
+      setState(() {
+        _rawDurum = 'IPTAL';
+        _durumMetni = 'Sipariş Alındı';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (sonuc['message'] ?? '✅ Sipariş iptal edildi').toString(),
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (sonuc['message'] ?? '❌ Sipariş iptal edilemedi').toString(),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -392,22 +476,26 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
                     child: Container(
                       width: 88,
                       height: 88,
-                      decoration: const BoxDecoration(
-                        color: primary,
+                      decoration: BoxDecoration(
+                        color: _iptalEdildi ? Colors.red : primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.check_rounded,
+                      child: Icon(
+                        _iptalEdildi
+                            ? Icons.close_rounded
+                            : Icons.check_rounded,
                         color: Colors.white,
                         size: 48,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Siparişiniz Başarıyla Alındı',
+                  Text(
+                    _iptalEdildi
+                        ? 'Siparişiniz İptal Edildi'
+                        : 'Siparişiniz Başarıyla Alındı',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 26,
                       height: 1.2,
@@ -416,10 +504,12 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Restoran siparişinizi onayladı.',
+                  Text(
+                    _iptalEdildi
+                        ? 'Bu sipariş talebiniz üzerine iptal edildi.'
+                        : 'Restoran siparişinizi onayladı.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -814,34 +904,46 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _refreshOrderStatus,
-                      icon: const Icon(Icons.my_location_rounded, size: 20),
-                      label: Text(
-                        _isRefreshing
-                            ? 'Güncelleniyor...'
-                            : 'Siparişi Takip Et',
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                  if (_siparisIptalEdilebilir)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _isCanceling ? null : _siparisiIptalEt,
+                        icon: _isCanceling
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.cancel_outlined, size: 20),
+                        label: Text(
+                          _isCanceling
+                              ? 'İptal Ediliyor...'
+                              : 'Siparişi İptal Et',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        disabledBackgroundColor: primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          disabledBackgroundColor: Colors.red.withValues(
+                            alpha: 0.6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                  if (_siparisIptalEdilebilir) const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
