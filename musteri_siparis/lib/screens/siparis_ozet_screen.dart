@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'menu_screen.dart';
 
@@ -53,6 +55,9 @@ class SiparisOzetScreen extends StatefulWidget {
 }
 
 class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
+  // TODO: Gerçek müşteri hizmetleri numarasıyla değiştirin.
+  static const String _musteriHizmetleriTelefon = '08501234567';
+
   late String _siparisTipi;
   late String _odemeTipi;
   late String _musteriAdi;
@@ -134,6 +139,8 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
         return Icons.receipt_long_rounded;
       case 'Hazırlanıyor':
         return Icons.restaurant_menu_rounded;
+      case 'Kuryeye Verildi':
+        return Icons.inventory_2_rounded;
       case 'Kurye Yolda':
         return Icons.delivery_dining_rounded;
       case 'Teslim Edildi':
@@ -184,18 +191,17 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
 
   int _statusStepFromRaw(String? raw) {
     final s = (raw ?? '').toLowerCase();
-    if (s.contains('teslim')) return 3;
+    if (s.contains('teslim')) return 4;
     // Sadece gerçekten yola çıkınca (YOLDA / dagitim) "Kurye Yolda" gösterilir.
+    if (s.contains('yolda') || s.contains('dagitim') || s.contains('dağıtım')) {
+      return 3;
+    }
     // "KURYEDE" durumu kuryenin siparişi teslim aldığı ama henüz yola
-    // çıkmadığı anı temsil eder, bu yüzden burada "yol" ile eşleşmemesi için
-    // ayrı kontrol ediliyor (ör. "kuryede" içinde "yol" geçmez, güvenli).
-    if (s.contains('yolda') || s.contains('dagitim')) {
+    // çıkmadığı anı temsil eder; ayrı bir adım olarak gösterilir.
+    if (s.contains('kuryede')) {
       return 2;
     }
-    if (s.contains('kuryede') ||
-        s.contains('hazır') ||
-        s.contains('hazir') ||
-        s.contains('piş')) {
+    if (s.contains('hazır') || s.contains('hazir') || s.contains('piş')) {
       return 1;
     }
     return 0;
@@ -203,8 +209,9 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
 
   String _friendlyStatusText(String? raw) {
     final step = _statusStepFromRaw(raw);
-    if (step == 3) return 'Teslim Edildi';
-    if (step == 2) return 'Kurye Yolda';
+    if (step == 4) return 'Teslim Edildi';
+    if (step == 3) return 'Kurye Yolda';
+    if (step == 2) return 'Kuryeye Verildi';
     if (step == 1) return 'Hazırlanıyor';
     return 'Sipariş Alındı';
   }
@@ -333,10 +340,19 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
 
   bool get _iptalEdildi => (_rawDurum ?? '').toUpperCase().contains('IPTAL');
 
-  bool get _siparisIptalEdilebilir {
-    if (widget.siparisId == null) return false;
+  /// Kurye siparişi teslim aldıysa (kuryede/yolda/dagitimda) artık
+  /// uygulama üzerinden doğrudan iptal/iade yapılamaz.
+  bool get _kuryeTeslimAldiMi {
+    final s = (_rawDurum ?? '').toLowerCase();
+    return s.contains('kuryede') ||
+        s.contains('yolda') ||
+        s.contains('dagitim') ||
+        s.contains('dağıtım');
+  }
+
+  bool get _siparisTamamlanmisMi {
     final s = (_rawDurum ?? '').toUpperCase();
-    const iptalEdilemeyenler = [
+    const bittiDurumlar = [
       'TAMAMLANDI',
       'ODENDI',
       'IPTAL',
@@ -344,18 +360,127 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
       'IADE',
       'KISMI_IADE',
     ];
-    return !iptalEdilemeyenler.any((d) => s.contains(d));
+    return bittiDurumlar.any((d) => s.contains(d));
+  }
+
+  bool get _siparisIptalEdilebilir {
+    if (widget.siparisId == null) return false;
+    if (_kuryeTeslimAldiMi) return false;
+    return !_siparisTamamlanmisMi;
+  }
+
+  /// Kurye teslim aldığı için uygulamadan iptal edilemeyen ama sipariş
+  /// henüz tamamlanmamış (teslim edilmemiş) durumlarda müşteri
+  /// hizmetlerine yönlendirme butonu gösterilir.
+  bool get _musteriHizmetleriGerekli {
+    if (widget.siparisId == null) return false;
+    if (_siparisTamamlanmisMi) return false;
+    return _kuryeTeslimAldiMi;
+  }
+
+  Future<void> _musteriHizmetleriniAra() async {
+    final uri = Uri(scheme: 'tel', path: _musteriHizmetleriTelefon);
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched && mounted) {
+        _telefonNumarasiniKopyala();
+      }
+    } catch (_) {
+      if (mounted) {
+        _telefonNumarasiniKopyala();
+      }
+    }
+  }
+
+  void _telefonNumarasiniKopyala() {
+    Clipboard.setData(const ClipboardData(text: _musteriHizmetleriTelefon));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Arama başlatılamadı. Numara kopyalandı: $_musteriHizmetleriTelefon',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _musteriHizmetleriDialogGoster() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kurye Siparişi Teslim Aldı'),
+        content: const Text(
+          'Kurye siparişinizi teslim aldığı için bu aşamada uygulama '
+          'üzerinden iptal veya iade işlemi yapılamıyor. İptal/iade '
+          'talebiniz için lütfen müşteri hizmetlerimizle iletişime geçin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Kapat'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _musteriHizmetleriniAra();
+            },
+            child: const Text('Müşteri Hizmetlerini Ara'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _siparisiIptalEt() async {
     if (widget.siparisId == null || _isCanceling) return;
 
+    // Kurye teslim aldıysa doğrudan iptale izin verme, müşteri
+    // hizmetlerine yönlendir.
+    if (_kuryeTeslimAldiMi) {
+      await _musteriHizmetleriDialogGoster();
+      return;
+    }
+
+    final sebepController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
     final onay = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Siparişi İptal Et'),
-        content: const Text(
-          'Bu siparişi iptal etmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bu siparişi iptal etmek istediğinize emin misiniz? '
+                'Bu işlem geri alınamaz.',
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: sebepController,
+                maxLines: 3,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'İptal nedeni',
+                  hintText: 'Lütfen iptal nedeninizi yazın',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'İptal nedeni zorunludur';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -367,7 +492,11 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(dialogContext, true);
+              }
+            },
             child: const Text('Evet, İptal Et'),
           ),
         ],
@@ -376,9 +505,18 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
 
     if (onay != true || !mounted) return;
 
+    final sebep = sebepController.text.trim();
+
     setState(() => _isCanceling = true);
 
-    final sonuc = await ApiService.siparisIptalEt(widget.siparisId!);
+    // NOT: ApiService.siparisIptalEt metodunun `sebep` parametresini kabul
+    // edip backend'e iletmesi gerekiyor. Eğer metod imzanız farklıysa
+    // (örn. sadece siparisId alıyorsa) api_service.dart içindeki
+    // siparisIptalEt metodunu buna göre güncelleyin.
+    final sonuc = await ApiService.siparisIptalEt(
+      widget.siparisId!,
+      sebep: sebep,
+    );
 
     if (!mounted) return;
     setState(() => _isCanceling = false);
@@ -420,13 +558,14 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
     final teslimSuresi = '25–35 dk';
     final indirim = 0.0;
 
-    final currentStep = _statusStepFromRaw(_durumMetni);
+    final currentStep = _statusStepFromRaw(_rawDurum);
 
     final statusItems = [
       ('Sipariş Alındı', currentStep >= 0),
       ('Hazırlanıyor', currentStep >= 1),
-      ('Kurye Yolda', currentStep >= 2),
-      ('Teslim Edildi', currentStep >= 3),
+      ('Kuryeye Verildi', currentStep >= 2),
+      ('Kurye Yolda', currentStep >= 3),
+      ('Teslim Edildi', currentStep >= 4),
     ];
 
     String musteriAdresText = (_musteriAdres ?? '').trim();
@@ -944,6 +1083,32 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
                       ),
                     ),
                   if (_siparisIptalEdilebilir) const SizedBox(height: 12),
+                  if (_musteriHizmetleriGerekli)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _musteriHizmetleriDialogGoster,
+                        icon: const Icon(Icons.support_agent_rounded, size: 20),
+                        label: const Text(
+                          'Müşteri Hizmetlerine Bağlan',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF6C00),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_musteriHizmetleriGerekli) const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 56,

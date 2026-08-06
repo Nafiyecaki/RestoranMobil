@@ -414,7 +414,10 @@ class ApiService {
   // ============================================================
   // ❌ SİPARİŞ İPTAL ET
   // ============================================================
-  static Future<Map<String, dynamic>> siparisIptalEt(int siparisId) async {
+  static Future<Map<String, dynamic>> siparisIptalEt(
+    int siparisId, {
+    String? sebep,
+  }) async {
     try {
       final token = await _getToken();
       final headers = {'Content-Type': 'application/json'};
@@ -426,6 +429,10 @@ class ApiService {
           .put(
             Uri.parse('$baseUrl/siparisler/$siparisId/iptal'),
             headers: headers,
+            body: jsonEncode({
+              if (sebep != null && sebep.trim().isNotEmpty)
+                'iptalSebebi': sebep.trim(),
+            }),
           )
           .timeout(const Duration(seconds: 12));
 
