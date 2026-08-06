@@ -56,111 +56,26 @@ class ProfileWhoWeAreScreen extends StatelessWidget {
       backgroundColor: isDark
           ? const Color(0xFF0B0F0C)
           : const Color(0xFFF3F6F3),
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            stretch: true,
-            expandedHeight: 240,
-            backgroundColor: _primaryColor,
-            foregroundColor: Colors.white,
-            iconTheme: const IconThemeData(color: Colors.white),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 24, bottom: 18),
-              title: const Text(
-                'Biz Kimiz',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [_primaryLight, _primaryColor, _primaryDark],
-                  ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Dekoratif bulanık daireler
-                    Positioned(
-                      right: -60,
-                      top: -50,
-                      child: _blurredCircle(220, Colors.white, 0.10),
-                    ),
-                    Positioned(
-                      left: -40,
-                      bottom: -60,
-                      child: _blurredCircle(180, Colors.white, 0.08),
-                    ),
-                    Positioned(
-                      right: 30,
-                      bottom: 30,
-                      child: Icon(
-                        Icons.restaurant_menu_rounded,
-                        size: 120,
-                        color: Colors.white.withValues(alpha: 0.10),
-                      ),
-                    ),
-                    Positioned(
-                      left: 24,
-                      right: 24,
-                      bottom: 64,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.25),
-                              ),
-                            ),
-                            child: const Text(
-                              '5 KİŞİLİK EKİP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Restoran otomasyonu deneyimini hızlandırmak '
-                            'için birlikte çalışan tutkulu bir ekibiz.',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.95),
-                              fontSize: 13.5,
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 22, 16, 28),
-            sliver: SliverLayoutBuilder(
+      appBar: AppBar(
+        backgroundColor: _primaryColor,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Biz Kimiz',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.2),
+        ),
+      ),
+      body: Column(
+        children: [
+          _buildFixedHeader(),
+          Expanded(
+            child: LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.crossAxisExtent >= 700;
+                final isWide = constraints.maxWidth >= 700;
+
                 if (isWide) {
-                  return SliverGrid(
+                  return GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 22, 16, 28),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
@@ -168,31 +83,76 @@ class ProfileWhoWeAreScreen extends StatelessWidget {
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
                         ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
+                    itemCount: _members.length,
+                    itemBuilder: (context, index) {
                       final member = _members[index];
                       return _TeamMemberCard(
                         member: member,
                         index: index,
                         isDark: isDark,
                       );
-                    }, childCount: _members.length),
+                    },
                   );
                 }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 28),
+                  itemCount: _members.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
                     final member = _members[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _TeamMemberCard(
-                        member: member,
-                        index: index,
-                        isDark: isDark,
-                      ),
+                    return _TeamMemberCard(
+                      member: member,
+                      index: index,
+                      isDark: isDark,
                     );
-                  }, childCount: _members.length),
+                  },
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFixedHeader() {
+    return Container(
+      height: 150,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_primaryLight, _primaryColor, _primaryDark],
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned(
+            right: -60,
+            top: -50,
+            child: _blurredCircle(220, Colors.white, 0.10),
+          ),
+          Positioned(
+            left: -40,
+            bottom: -60,
+            child: _blurredCircle(180, Colors.white, 0.08),
+          ),
+          Positioned(
+            right: 24,
+            bottom: 20,
+            child: Icon(
+              Icons.restaurant_menu_rounded,
+              size: 80,
+              color: Colors.white.withValues(alpha: 0.10),
+            ),
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 16,
+            child: const SizedBox.shrink(),
           ),
         ],
       ),

@@ -680,59 +680,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         body: Row(
           children: [
-            if (isWide) ...[
-              _buildSideNav(isDark),
-              const VerticalDivider(width: 1),
-            ],
+            if (isWide) _buildSideNav(isDark),
             Expanded(
-              child: _isLoading
-                  ? _buildLoading()
-                  : _errorMessage != null
-                  ? _buildError()
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: _handleRefresh,
-                            color: _primaryColor,
-                            child: SingleChildScrollView(
-                              controller: _profileScrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(16),
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 900,
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      _buildProfileCard(isDark),
-                                      const SizedBox(height: 16),
-                                      _buildAddressSection(isDark),
-                                      const SizedBox(height: 16),
-                                      _buildOrdersSection(isDark),
-                                      const SizedBox(height: 16),
-                                      _buildOrderHistorySection(isDark),
-                                      const SizedBox(height: 16),
-                                      _buildFavoritesSection(
-                                        isDark,
-                                        sepetProvider,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      _buildWhoWeAreSection(isDark),
-                                      const SizedBox(height: 16),
-                                      _buildSettingsSection(isDark),
-                                      const SizedBox(height: 16),
-                                    ],
-                                  ),
-                                ),
+              child: SafeArea(
+                child: _isLoading
+                    ? _buildLoading()
+                    : _errorMessage != null
+                    ? _buildError()
+                    : RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        child: SingleChildScrollView(
+                          controller: _profileScrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 840),
+                              child: Column(
+                                children: [
+                                  _buildProfileCard(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildAddressSection(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildOrdersSection(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildOrderHistorySection(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildFavoritesSection(isDark, sepetProvider),
+                                  const SizedBox(height: 16),
+                                  _buildWhoWeAreSection(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildSettingsSection(isDark),
+                                  const SizedBox(height: 16),
+                                  _buildStickyLogoutButton(isDark),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                        _buildStickyLogoutButton(isDark),
-                      ],
-                    ),
+                      ),
+              ),
             ),
           ],
         ),
@@ -1854,33 +1841,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _isLoggingOut ? null : _handleLogout,
-          icon: _isLoggingOut
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.logout, size: 20),
-          label: Text(
-            _isLoggingOut ? 'Çıkış Yapılıyor...' : 'Çıkış Yap',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.red.withValues(alpha: 0.6),
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isLoggingOut ? null : _handleLogout,
+              icon: _isLoggingOut
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.logout, size: 20),
+              label: Text(
+                _isLoggingOut ? 'Çıkış Yapılıyor...' : 'Çıkış Yap',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.red.withValues(alpha: 0.6),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
             ),
-            elevation: 0,
           ),
         ),
       ),
