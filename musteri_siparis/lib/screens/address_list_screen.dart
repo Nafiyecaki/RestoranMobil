@@ -509,79 +509,88 @@ class _AddressListScreenState extends State<AddressListScreen> {
           ? const Center(child: CircularProgressIndicator(color: _primaryColor))
           : _errorMessage != null
           ? _buildErrorState()
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1C1C1C)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'Düzenle butonuna basarak adres bilgilerini düzenleyebilir veya adresini silebilirsin.',
-                          style: TextStyle(
-                            color: isDark ? Colors.grey.shade300 : Colors.grey,
-                            height: 1.4,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _openAddressForm(),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Yeni Adres Ekle'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _accentColor,
-                            side: const BorderSide(color: _primaryColor),
-                            shape: RoundedRectangleBorder(
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1C1C1C)
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Text(
+                              'Düzenle butonuna basarak adres bilgilerini düzenleyebilir veya adresini silebilirsin.',
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey,
+                                height: 1.4,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openAddressForm(),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Yeni Adres Ekle'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _accentColor,
+                                side: const BorderSide(color: _primaryColor),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: _primaryColor,
+                        onRefresh: _refresh,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _addresses.length,
+                          separatorBuilder: (context, _) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final address = _addresses[index];
+                            return _AddressCard(
+                              address: address,
+                              isSelected: _selectedAddressId == address.adresId,
+                              selectedAddressId: _selectedAddressId,
+                              isDark: isDark,
+                              onSelect: () => _onSelectAddress(address),
+                              onEdit: () =>
+                                  _openAddressForm(existingAddress: address),
+                              onDelete: () => _deleteAddress(address),
+                              cardDataFuture: _cardDataFor(address),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: _primaryColor,
-                    onRefresh: _refresh,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: _addresses.length,
-                      separatorBuilder: (context, _) =>
-                          const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final address = _addresses[index];
-                        return _AddressCard(
-                          address: address,
-                          isSelected: _selectedAddressId == address.adresId,
-                          selectedAddressId: _selectedAddressId,
-                          isDark: isDark,
-                          onSelect: () => _onSelectAddress(address),
-                          onEdit: () =>
-                              _openAddressForm(existingAddress: address),
-                          onDelete: () => _deleteAddress(address),
-                          cardDataFuture: _cardDataFor(address),
-                        );
-                      },
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
   }

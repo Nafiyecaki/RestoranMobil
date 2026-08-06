@@ -604,547 +604,564 @@ class _SiparisOzetScreenState extends State<SiparisOzetScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: _iptalEdildi ? Colors.red : primary,
-                        shape: BoxShape.circle,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    children: [
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            color: _iptalEdildi ? Colors.red : primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _iptalEdildi
+                                ? Icons.close_rounded
+                                : Icons.check_rounded,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
                       ),
-                      child: Icon(
+                      const SizedBox(height: 16),
+                      Text(
                         _iptalEdildi
-                            ? Icons.close_rounded
-                            : Icons.check_rounded,
-                        color: Colors.white,
-                        size: 48,
+                            ? 'Siparişiniz İptal Edildi'
+                            : 'Siparişiniz Başarıyla Alındı',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 26,
+                          height: 1.2,
+                          fontWeight: FontWeight.w800,
+                          color: primaryText,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _iptalEdildi
-                        ? 'Siparişiniz İptal Edildi'
-                        : 'Siparişiniz Başarıyla Alındı',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 26,
-                      height: 1.2,
-                      fontWeight: FontWeight.w800,
-                      color: primaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _iptalEdildi
-                        ? 'Bu sipariş talebiniz üzerine iptal edildi.'
-                        : 'Restoran siparişinizi onayladı.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _card(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.schedule_rounded,
-                            color: primary,
-                          ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _iptalEdildi
+                            ? 'Bu sipariş talebiniz üzerine iptal edildi.'
+                            : 'Restoran siparişinizi onayladı.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: secondaryText,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tahmini Teslimat',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13,
-                                  color: secondaryText,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                teslimSuresi,
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: primaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: primary,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            widget.siparisId == null ? 'Statik' : 'Canlı',
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Sipariş Durumu',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 17,
-                            color: primaryText,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Anlık Durum: $_durumMetni',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...List.generate(statusItems.length, (index) {
-                          final isDone = statusItems[index].$2;
-                          final isLast = index == statusItems.length - 1;
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: isDone ? primary : Colors.white,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isDone
-                                              ? primary
-                                              : const Color(0xFFD1D5DB),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        isDone
-                                            ? Icons.check_rounded
-                                            : _statusIcon(
-                                                statusItems[index].$1,
-                                              ),
-                                        size: isDone ? 15 : 12,
-                                        color: isDone
-                                            ? Colors.white
-                                            : secondaryText,
-                                      ),
-                                    ),
-                                    if (!isLast)
-                                      Container(
-                                        width: 2,
-                                        height: 34,
-                                        margin: const EdgeInsets.symmetric(
-                                          vertical: 4,
-                                        ),
-                                        color: isDone
-                                            ? primary
-                                            : const Color(0xFFE5E7EB),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  statusItems[index].$1,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 15,
-                                    fontWeight: isDone
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
-                                    color: isDone ? primaryText : secondaryText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
+                      ),
+                      const SizedBox(height: 20),
+                      _card(
+                        child: Row(
                           children: [
-                            Icon(Icons.badge_rounded, color: primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'Müşteri Bilgileri',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 17,
-                                color: primaryText,
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        ...infoRows.map((row) {
-                          final isAddress = row.$1 == 'Adres';
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              bottom: isAddress ? 14 : 10,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF3F4F6),
-                                    borderRadius: BorderRadius.circular(9),
-                                  ),
-                                  child: Icon(
-                                    _infoIcon(row.$1),
-                                    size: 16,
-                                    color: secondaryText,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        row.$1,
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          color: secondaryText,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        row.$2,
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          color: primaryText,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.fastfood_rounded, color: primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'Sipariş Ürünleri',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 17,
-                                color: primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        ..._urunler.map((item) {
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: const Color(0xFFEDEDED),
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF3F4F6),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.ramen_dining_rounded,
-                                    color: Color(0xFF6B7280),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.urunAdi,
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          color: primaryText,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '${item.adet} x',
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          color: secondaryText,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  '${item.satirToplami.toStringAsFixed(2)} ₺',
-                                  style: const TextStyle(
-                                    fontFamily: 'Inter',
-                                    color: primaryText,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.summarize_rounded, color: primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'Ödeme Özeti',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 17,
-                                color: primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        _priceRow('Ara Toplam', _araToplam),
-                        _priceRow('Teslimat', _teslimatUcreti),
-                        _priceRow('İndirim', indirim),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          child: Divider(height: 1, color: Color(0xFFE8E8E8)),
-                        ),
-                        Row(
-                          children: [
-                            const Text(
-                              'Toplam',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: primaryText,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${(_toplamTutar - indirim).toStringAsFixed(2)} ₺',
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w800,
-                                fontSize: 22,
+                              child: const Icon(
+                                Icons.schedule_rounded,
                                 color: primary,
                               ),
                             ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Tahmini Teslimat',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      color: secondaryText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    teslimSuresi,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: primaryText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: primary,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                widget.siparisId == null ? 'Statik' : 'Canlı',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                children: [
-                  if (_siparisIptalEdilebilir)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isCanceling ? null : _siparisiIptalEt,
-                        icon: _isCanceling
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                      ),
+                      const SizedBox(height: 16),
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sipariş Durumu',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                                color: primaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Anlık Durum: $_durumMetni',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...List.generate(statusItems.length, (index) {
+                              final isDone = statusItems[index].$2;
+                              final isLast = index == statusItems.length - 1;
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 28,
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: isDone
+                                                ? primary
+                                                : Colors.white,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: isDone
+                                                  ? primary
+                                                  : const Color(0xFFD1D5DB),
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            isDone
+                                                ? Icons.check_rounded
+                                                : _statusIcon(
+                                                    statusItems[index].$1,
+                                                  ),
+                                            size: isDone ? 15 : 12,
+                                            color: isDone
+                                                ? Colors.white
+                                                : secondaryText,
+                                          ),
+                                        ),
+                                        if (!isLast)
+                                          Container(
+                                            width: 2,
+                                            height: 34,
+                                            margin: const EdgeInsets.symmetric(
+                                              vertical: 4,
+                                            ),
+                                            color: isDone
+                                                ? primary
+                                                : const Color(0xFFE5E7EB),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      statusItems[index].$1,
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 15,
+                                        fontWeight: isDone
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: isDone
+                                            ? primaryText
+                                            : secondaryText,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.badge_rounded, color: primary),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Müşteri Bilgileri',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 17,
+                                    color: primaryText,
+                                  ),
                                 ),
-                              )
-                            : const Icon(Icons.cancel_outlined, size: 20),
-                        label: Text(
-                          _isCanceling
-                              ? 'İptal Ediliyor...'
-                              : 'Siparişi İptal Et',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          disabledBackgroundColor: Colors.red.withValues(
-                            alpha: 0.6,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_siparisIptalEdilebilir) const SizedBox(height: 12),
-                  if (_musteriHizmetleriGerekli)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _musteriHizmetleriDialogGoster,
-                        icon: const Icon(Icons.support_agent_rounded, size: 20),
-                        label: const Text(
-                          'Müşteri Hizmetlerine Bağlan',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF6C00),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_musteriHizmetleriGerekli) const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                          return;
-                        }
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (_) => const MenuScreen()),
-                          (route) => false,
-                        );
-                      },
-                      icon: const Icon(Icons.home_rounded, size: 20),
-                      label: const Text(
-                        'Ana Sayfaya Dön',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            ...infoRows.map((row) {
+                              final isAddress = row.$1 == 'Adres';
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isAddress ? 14 : 10,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF3F4F6),
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Icon(
+                                        _infoIcon(row.$1),
+                                        size: 16,
+                                        color: secondaryText,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            row.$1,
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: secondaryText,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            row.$2,
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: primaryText,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryText,
-                        side: const BorderSide(color: Color(0xFFE8E8E8)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                      const SizedBox(height: 16),
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.fastfood_rounded, color: primary),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Sipariş Ürünleri',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 17,
+                                    color: primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            ..._urunler.map((item) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFFEDEDED),
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF3F4F6),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.ramen_dining_rounded,
+                                        color: Color(0xFF6B7280),
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.urunAdi,
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: primaryText,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            '${item.adet} x',
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: secondaryText,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '${item.satirToplami.toStringAsFixed(2)} ₺',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        color: primaryText,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.summarize_rounded, color: primary),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Ödeme Özeti',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 17,
+                                    color: primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            _priceRow('Ara Toplam', _araToplam),
+                            _priceRow('Teslimat', _teslimatUcreti),
+                            _priceRow('İndirim', indirim),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: Divider(
+                                height: 1,
+                                color: Color(0xFFE8E8E8),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                const Text(
+                                  'Toplam',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: primaryText,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${(_toplamTutar - indirim).toStringAsFixed(2)} ₺',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 22,
+                                    color: primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Column(
+                    children: [
+                      if (_siparisIptalEdilebilir)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            onPressed: _isCanceling ? null : _siparisiIptalEt,
+                            icon: _isCanceling
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.cancel_outlined, size: 20),
+                            label: Text(
+                              _isCanceling
+                                  ? 'İptal Ediliyor...'
+                                  : 'Siparişi İptal Et',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              disabledBackgroundColor: Colors.red.withValues(
+                                alpha: 0.6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_siparisIptalEdilebilir) const SizedBox(height: 12),
+                      if (_musteriHizmetleriGerekli)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            onPressed: _musteriHizmetleriDialogGoster,
+                            icon: const Icon(
+                              Icons.support_agent_rounded,
+                              size: 20,
+                            ),
+                            label: const Text(
+                              'Müşteri Hizmetlerine Bağlan',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF6C00),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_musteriHizmetleriGerekli) const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                              return;
+                            }
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => const MenuScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          icon: const Icon(Icons.home_rounded, size: 20),
+                          label: const Text(
+                            'Ana Sayfaya Dön',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryText,
+                            side: const BorderSide(color: Color(0xFFE8E8E8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

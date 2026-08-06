@@ -298,12 +298,60 @@ class _SepetScreenState extends State<SepetScreen> {
     ).pushReplacement(MaterialPageRoute(builder: (_) => const MenuScreen()));
   }
 
+  /// Geniş (web/masaüstü) ekranlarda alt gezinme çubuğu yerine kullanılan
+  /// yan menü. Menü sayfasındaki _buildSideNav ile aynı mantığı kullanır.
+  Widget _buildSideNav(bool isDark) {
+    return NavigationRail(
+      backgroundColor: isDark ? const Color(0xFF151515) : Colors.white,
+      selectedIndex: 1,
+      onDestinationSelected: _onBottomNavTap,
+      labelType: NavigationRailLabelType.all,
+      selectedIconTheme: const IconThemeData(color: Color(0xFF2E7D32)),
+      selectedLabelTextStyle: const TextStyle(
+        color: Color(0xFF2E7D32),
+        fontWeight: FontWeight.w700,
+      ),
+      unselectedIconTheme: IconThemeData(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.restaurant_menu_outlined),
+          selectedIcon: Icon(Icons.restaurant_menu),
+          label: Text('Menü'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart),
+          label: Text('Sepet'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.event_available_outlined),
+          selectedIcon: Icon(Icons.event_available),
+          label: Text('Rezervasyon'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: Text('Profil'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sepet = context.watch<SepetProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final teslimatUcreti = _seciliSiparisTipi == 'SALON' ? 0.0 : 9.99;
     final toplam = sepet.toplamFiyat + teslimatUcreti;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 900px eşiği: altında mobil/tablet dikey düzen, üstünde masaüstü
+    // (web) yan menülü düzen kullanılır.
+    final isWide = screenWidth >= 900;
 
     return PopScope(
       canPop: false,
@@ -342,149 +390,179 @@ class _SepetScreenState extends State<SepetScreen> {
               ),
           ],
         ),
-        body: _isLoading
-            ? _buildLoading()
-            : sepet.sepet.isEmpty
-            ? _buildEmptyCart(isDark)
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    ...sepet.sepet.map(
-                      (item) => _buildCartItem(item, sepet, isDark),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdownRow(
-                      icon: Icons.local_shipping,
-                      label: 'Sipariş Tipi',
-                      value: _seciliSiparisTipi,
-                      items: _siparisTipleri,
-                      onChanged: (value) {
-                        setState(() {
-                          _seciliSiparisTipi = value!;
-                          _adresGoster = value != 'SALON';
-                        });
-                      },
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _adController,
-                      icon: Icons.person,
-                      label: 'Adınız Soyadınız',
-                      hint: 'Ahmet Yılmaz',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildTextField(
-                      controller: _telController,
-                      icon: Icons.phone,
-                      label: 'Telefon Numarası',
-                      hint: '555 123 45 67',
-                      keyboardType: TextInputType.phone,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 10),
-                    if (_adresGoster)
-                      _buildTextField(
-                        controller: _adresController,
-                        icon: Icons.location_on,
-                        label: 'Teslimat Adresi',
-                        hint: 'Mahalle, Sokak, Apartman No',
-                        maxLines: 2,
-                        isDark: isDark,
-                      ),
-                    const SizedBox(height: 10),
-                    _buildTextField(
-                      controller: _notController,
-                      icon: Icons.note,
-                      label: 'Sipariş Notu (Opsiyonel)',
-                      hint: 'Kapı zili çalışmıyor, arayın...',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildPaymentSummary(sepet, isDark, toplam, teslimatUcreti),
-                    const SizedBox(height: 16),
-                    _buildPaymentTypeInfo(isDark),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: _gonderiliyor
-                            ? null
-                            : () => _siparisVer(sepet),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _gonderiliyor
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text(
-                                    'Sipariş Gönderiliyor...',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'SİPARİŞ VER',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Icon(
-                                    Icons.arrow_forward,
-                                    color: Colors.white,
-                                  ),
-                                ],
+        body: Builder(
+          builder: (context) {
+            final content = _isLoading
+                ? _buildLoading()
+                : sepet.sepet.isEmpty
+                ? _buildEmptyCart(isDark)
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 700),
+                        child: Column(
+                          children: [
+                            ...sepet.sepet.map(
+                              (item) => _buildCartItem(item, sepet, isDark),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildDropdownRow(
+                              icon: Icons.local_shipping,
+                              label: 'Sipariş Tipi',
+                              value: _seciliSiparisTipi,
+                              items: _siparisTipleri,
+                              onChanged: (value) {
+                                setState(() {
+                                  _seciliSiparisTipi = value!;
+                                  _adresGoster = value != 'SALON';
+                                });
+                              },
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildTextField(
+                              controller: _adController,
+                              icon: Icons.person,
+                              label: 'Adınız Soyadınız',
+                              hint: 'Ahmet Yılmaz',
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildTextField(
+                              controller: _telController,
+                              icon: Icons.phone,
+                              label: 'Telefon Numarası',
+                              hint: '555 123 45 67',
+                              keyboardType: TextInputType.phone,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 10),
+                            if (_adresGoster)
+                              _buildTextField(
+                                controller: _adresController,
+                                icon: Icons.location_on,
+                                label: 'Teslimat Adresi',
+                                hint: 'Mahalle, Sokak, Apartman No',
+                                maxLines: 2,
+                                isDark: isDark,
                               ),
+                            const SizedBox(height: 10),
+                            _buildTextField(
+                              controller: _notController,
+                              icon: Icons.note,
+                              label: 'Sipariş Notu (Opsiyonel)',
+                              hint: 'Kapı zili çalışmıyor, arayın...',
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildPaymentSummary(
+                              sepet,
+                              isDark,
+                              toplam,
+                              teslimatUcreti,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildPaymentTypeInfo(isDark),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: _gonderiliyor
+                                    ? null
+                                    : () => _siparisVer(sepet),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2E7D32),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: _gonderiliyor
+                                    ? Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Text(
+                                            'Sipariş Gönderiliyor...',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'SİPARİŞ VER',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Icon(
+                                            Icons.arrow_forward,
+                                            color: Colors.white,
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Siparişiniz onaylandıktan sonra hazırlanacaktır.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Siparişiniz onaylandıktan sonra hazırlanacaktır.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-        bottomNavigationBar: AppBottomNav(
-          currentIndex: 1,
-          onTap: _onBottomNavTap,
+                  );
+            return isWide
+                ? Row(
+                    children: [
+                      _buildSideNav(isDark),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
+                    ],
+                  )
+                : content;
+          },
         ),
+        bottomNavigationBar: isWide
+            ? null
+            : AppBottomNav(currentIndex: 1, onTap: _onBottomNavTap),
       ),
     );
   }

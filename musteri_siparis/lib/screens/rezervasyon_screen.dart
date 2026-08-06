@@ -168,9 +168,94 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
     }
   }
 
+  void _navigateBackSafely() {
+    if (!mounted) return;
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const MenuScreen()));
+  }
+
+  /// Geniş (web/masaüstü) ekranlarda alt gezinme çubuğu yerine kullanılan
+  /// yan menü. Menü sayfasındaki _buildSideNav ile aynı mantığı kullanır.
+  Widget _buildSideNav(bool isDark) {
+    return NavigationRail(
+      backgroundColor: isDark ? const Color(0xFF151515) : Colors.white,
+      selectedIndex: 2,
+      onDestinationSelected: _onBottomNavTap,
+      labelType: NavigationRailLabelType.all,
+      selectedIconTheme: const IconThemeData(color: Color(0xFF2E7D32)),
+      selectedLabelTextStyle: const TextStyle(
+        color: Color(0xFF2E7D32),
+        fontWeight: FontWeight.w700,
+      ),
+      unselectedIconTheme: IconThemeData(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.restaurant_menu_outlined),
+          selectedIcon: Icon(Icons.restaurant_menu),
+          label: Text('Menü'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart),
+          label: Text('Sepet'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.event_available_outlined),
+          selectedIcon: Icon(Icons.event_available),
+          label: Text('Rezervasyon'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: Text('Profil'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 900px eşiği: altında mobil/tablet dikey düzen, üstünde masaüstü
+    // (web) yan menülü düzen kullanılır.
+    final isWide = screenWidth >= 900;
+
+    final content = SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFormCard(isDark),
+              const SizedBox(height: 16),
+              _buildReservationsHeader(isDark),
+              const SizedBox(height: 10),
+              if (_rezervasyonlar.isEmpty)
+                _buildEmptyState(isDark)
+              else
+                ..._rezervasyonlar.map(
+                  (kayit) => _buildRezervasyonCard(kayit, isDark),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: isDark
@@ -189,29 +274,27 @@ class _RezervasyonScreenState extends State<RezervasyonScreen> {
         elevation: 0,
         backgroundColor: const Color(0xFF2E7D32),
         foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFormCard(isDark),
-            const SizedBox(height: 16),
-            _buildReservationsHeader(isDark),
-            const SizedBox(height: 10),
-            if (_rezervasyonlar.isEmpty)
-              _buildEmptyState(isDark)
-            else
-              ..._rezervasyonlar.map(
-                (kayit) => _buildRezervasyonCard(kayit, isDark),
-              ),
-          ],
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: _navigateBackSafely,
         ),
       ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 2,
-        onTap: _onBottomNavTap,
-      ),
+      body: isWide
+          ? Row(
+              children: [
+                _buildSideNav(isDark),
+                const VerticalDivider(width: 1),
+                Expanded(child: content),
+              ],
+            )
+          : content,
+      bottomNavigationBar: isWide
+          ? null
+          : AppBottomNav(currentIndex: 2, onTap: _onBottomNavTap),
     );
   }
 

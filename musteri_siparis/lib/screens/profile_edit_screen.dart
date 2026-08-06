@@ -110,70 +110,75 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bilgilerini guncelle. E-posta adresi su an sadece goruntulenir.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 18),
-              _formField(
-                controller: _adiController,
-                label: 'Ad',
-                icon: Icons.person_outline,
-              ),
-              const SizedBox(height: 12),
-              _formField(
-                controller: _soyadiController,
-                label: 'Soyad',
-                icon: Icons.person_outline,
-              ),
-              const SizedBox(height: 12),
-              _formField(
-                controller: _emailController,
-                label: 'E-posta',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                readOnly: true,
-                helperText: 'E-posta degisikligi bu surumde kapali',
-              ),
-              const SizedBox(height: 12),
-              _formField(
-                controller: _telefonController,
-                label: 'Telefon',
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bilgilerini guncelle. E-posta adresi su an sadece goruntulenir.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 18),
+                  _formField(
+                    controller: _adiController,
+                    label: 'Ad',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 12),
+                  _formField(
+                    controller: _soyadiController,
+                    label: 'Soyad',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 12),
+                  _formField(
+                    controller: _emailController,
+                    label: 'E-posta',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    readOnly: true,
+                    helperText: 'E-posta degisikligi bu surumde kapali',
+                  ),
+                  const SizedBox(height: 12),
+                  _formField(
+                    controller: _telefonController,
+                    label: 'Telefon',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Kaydet',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                     ),
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Kaydet',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -243,6 +243,42 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 900px eşiği: altında mobil/tablet dikey düzen, üstünde masaüstü
+    // (web) yan menülü düzen kullanılır.
+    final isWide = screenWidth >= 900;
+
+    final content = _isLoading
+        ? const Center(
+            child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+          )
+        : _errorMessage != null
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 50),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[200] : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _menuleriYukle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Tekrar Dene'),
+                ),
+              ],
+            ),
+          )
+        : _buildMenuContent(isDark);
 
     return Scaffold(
       backgroundColor: isDark
@@ -285,89 +321,143 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+      body: isWide
+          ? Row(
+              children: [
+                _buildSideNav(isDark),
+                const VerticalDivider(width: 1),
+                Expanded(child: content),
+              ],
             )
-          : _errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                  const SizedBox(height: 12),
-                  Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isDark ? Colors.grey[200] : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _menuleriYukle,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Tekrar Dene'),
-                  ),
-                ],
-              ),
-            )
-          : _buildMenuContent(isDark),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 0,
-        onTap: _onBottomNavTap,
+          : content,
+      bottomNavigationBar: isWide
+          ? null
+          : AppBottomNav(currentIndex: 0, onTap: _onBottomNavTap),
+    );
+  }
+
+  /// Geniş (web/masaüstü) ekranlarda alt gezinme çubuğu yerine kullanılan
+  /// yan menü. Aynı _onBottomNavTap mantığını kullanır.
+  Widget _buildSideNav(bool isDark) {
+    return NavigationRail(
+      backgroundColor: isDark ? const Color(0xFF151515) : Colors.white,
+      selectedIndex: 0,
+      onDestinationSelected: _onBottomNavTap,
+      labelType: NavigationRailLabelType.all,
+      selectedIconTheme: const IconThemeData(color: Color(0xFF2E7D32)),
+      selectedLabelTextStyle: const TextStyle(
+        color: Color(0xFF2E7D32),
+        fontWeight: FontWeight.w700,
       ),
+      unselectedIconTheme: IconThemeData(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.restaurant_menu_outlined),
+          selectedIcon: Icon(Icons.restaurant_menu),
+          label: Text('Menü'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart),
+          label: Text('Sepet'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.event_available_outlined),
+          selectedIcon: Icon(Icons.event_available),
+          label: Text('Rezervasyon'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: Text('Profil'),
+        ),
+      ],
     );
   }
 
   Widget _buildMenuContent(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSearchBar(isDark),
-          const SizedBox(height: 12),
-          _buildCategoryFilter(isDark),
-          const SizedBox(height: 16),
-          _buildSectionTitle(
-            _selectedKategori == 'Tümü'
-                ? 'Tüm Menü'
-                : '$_selectedKategori Menüsü',
-            isDark: isDark,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Çok geniş ekranlarda (masaüstü/web) içeriğin uçtan uca yayılıp
+        // dağınık görünmemesi için maksimum genişlik veriyor ve ortalıyoruz.
+        const maxContentWidth = 1100.0;
+        final contentWidth = constraints.maxWidth > maxContentWidth
+            ? maxContentWidth
+            : constraints.maxWidth;
+        final crossAxisCount = _gridColumnsForWidth(contentWidth);
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: maxContentWidth),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchBar(isDark),
+                  const SizedBox(height: 12),
+                  _buildCategoryFilter(isDark),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle(
+                    _selectedKategori == 'Tümü'
+                        ? 'Tüm Menü'
+                        : '$_selectedKategori Menüsü',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _filtrelenmisUrunler.isEmpty
+                      ? Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: Text(
+                              'Ürün bulunamadı 😔',
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.grey[300]
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                childAspectRatio: 0.74,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                          itemCount: _filtrelenmisUrunler.length,
+                          itemBuilder: (context, index) => _buildProductCard(
+                            _filtrelenmisUrunler[index],
+                            isDark,
+                          ),
+                        ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
-          _filtrelenmisUrunler.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'Ürün bulunamadı 😔',
-                      style: TextStyle(
-                        color: isDark ? Colors.grey[300] : Colors.black87,
-                      ),
-                    ),
-                  ),
-                )
-              : GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.74,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
-                  itemCount: _filtrelenmisUrunler.length,
-                  itemBuilder: (context, index) =>
-                      _buildProductCard(_filtrelenmisUrunler[index], isDark),
-                ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  /// Kullanılabilir genişliğe göre grid sütun sayısını belirler.
+  /// Mobilde 2 sütun kalır; ekran genişledikçe kartlar daha fazla
+  /// sütuna yayılarak boşluk bırakmaz.
+  int _gridColumnsForWidth(double width) {
+    if (width >= 1000) return 5;
+    if (width >= 800) return 4;
+    if (width >= 600) return 3;
+    return 2;
   }
 
   Widget _buildSearchBar(bool isDark) {

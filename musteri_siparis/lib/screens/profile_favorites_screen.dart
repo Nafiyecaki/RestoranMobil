@@ -112,153 +112,187 @@ class ProfileFavoritesScreen extends StatelessWidget {
                 ),
               ),
             )
-          : GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.74,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: favoriteProducts.length,
-              itemBuilder: (context, index) {
-                final urun = favoriteProducts[index];
-                final resimDosyasi = _getResimDosyasi(urun.urunAdi);
-                final isFavori = favoriteIds.contains(urun.urunId);
-
-                return InkWell(
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => UrunDetayScreen(urun: urun),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF171717) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF303030)
-                            : const Color(0xFFE5E7EB),
-                      ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                const maxContentWidth = 1100.0;
+                final contentWidth = constraints.maxWidth > maxContentWidth
+                    ? maxContentWidth
+                    : constraints.maxWidth;
+                final crossAxisCount = _gridColumnsForWidth(contentWidth);
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: maxContentWidth,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        childAspectRatio: 0.74,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: favoriteProducts.length,
+                      itemBuilder: (context, index) {
+                        final urun = favoriteProducts[index];
+                        final resimDosyasi = _getResimDosyasi(urun.urunAdi);
+                        final isFavori = favoriteIds.contains(urun.urunId);
+
+                        return InkWell(
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => UrunDetayScreen(urun: urun),
                               ),
-                              child: SizedBox(
-                                height: 120,
-                                width: double.infinity,
-                                child: Image.asset(
-                                  resimDosyasi,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Center(
-                                      child: Icon(
-                                        _getCategoryIcon(urun.kategoriId),
-                                        size: 40,
-                                        color: Colors.green[300],
-                                      ),
-                                    );
-                                  },
-                                ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF171717)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF303030)
+                                    : const Color(0xFFE5E7EB),
                               ),
                             ),
-                            Positioned(
-                              top: 6,
-                              right: 6,
-                              child: GestureDetector(
-                                onTap: () {
-                                  context.read<SepetProvider>().favoriEkleCikar(
-                                    urun.urunId,
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: isFavori
-                                        ? Colors.red
-                                        : (isDark
-                                              ? const Color(0xFF252525)
-                                              : Colors.white),
-                                    shape: BoxShape.circle,
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black26,
-                                        blurRadius: 3,
-                                        offset: Offset(0, 1),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(16),
+                                        topRight: Radius.circular(16),
+                                      ),
+                                      child: SizedBox(
+                                        height: 120,
+                                        width: double.infinity,
+                                        child: Image.asset(
+                                          resimDosyasi,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Center(
+                                                  child: Icon(
+                                                    _getCategoryIcon(
+                                                      urun.kategoriId,
+                                                    ),
+                                                    size: 40,
+                                                    color: Colors.green[300],
+                                                  ),
+                                                );
+                                              },
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 6,
+                                      right: 6,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          context
+                                              .read<SepetProvider>()
+                                              .favoriEkleCikar(urun.urunId);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: isFavori
+                                                ? Colors.red
+                                                : (isDark
+                                                      ? const Color(0xFF252525)
+                                                      : Colors.white),
+                                            shape: BoxShape.circle,
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Colors.black26,
+                                                blurRadius: 3,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            isFavori
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: isFavori
+                                                ? Colors.white
+                                                : Colors.grey[500],
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        urun.urunAdi,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        urun.aciklama ?? '',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '₺${urun.fiyat.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2E7D32),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  child: Icon(
-                                    isFavori
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: isFavori
-                                        ? Colors.white
-                                        : Colors.grey[500],
-                                    size: 16,
-                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                urun.urunAdi,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                urun.aciklama ?? '',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '₺${urun.fiyat.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2E7D32),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 );
               },
             ),
     );
+  }
+
+  /// Kullanılabilir genişliğe göre grid sütun sayısını belirler.
+  /// Mobilde 2 sütun kalır; ekran genişledikçe kartlar daha fazla
+  /// sütuna yayılarak boşluk bırakmaz.
+  int _gridColumnsForWidth(double width) {
+    if (width >= 1000) return 5;
+    if (width >= 800) return 4;
+    if (width >= 600) return 3;
+    return 2;
   }
 }

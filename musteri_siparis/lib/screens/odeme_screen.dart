@@ -262,140 +262,145 @@ class _OdemeScreenState extends State<OdemeScreen>
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            // --- GERÇEK ORANLI (1.586) DÖNEN KART WİDGET'I ---
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, child) {
-                final angle = _animation.value;
-                final isBack = angle >= (pi / 2);
-
-                return Transform(
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.001) // Perspektif efekti
-                    ..rotateY(angle),
-                  alignment: Alignment.center,
-                  child: isBack
-                      ? Transform.scale(
-                          scaleX: -1,
-                          child: _buildCardBack(cardType),
-                        )
-                      : _buildCardFront(cardType),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // --- KART FORM ALANLARI ---
-            _buildInputField(
-              controller: _kartIsimController,
-              label: 'Kart Üzerindeki İsim',
-              hint: 'MEHMET YILMAZ',
-              icon: Icons.person_outline,
-              capitalization: TextCapitalization.characters,
-            ),
-            const SizedBox(height: 14),
-            _buildInputField(
-              controller: _kartNoController,
-              label: 'Kart Numarası',
-              hint: '4535 3453 4534 5435',
-              icon: Icons.credit_card,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(16),
-                _CardNumberFormatter(),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
               children: [
-                Expanded(
-                  child: _buildInputField(
-                    controller: _sktController,
-                    label: 'Son Kullanma (AA/YY)',
-                    hint: '12/28',
-                    icon: Icons.date_range,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
-                      _ExpiryDateFormatter(),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildInputField(
-                    controller: _cvvController,
-                    focusNode: _cvvFocusNode,
-                    label: 'CVV / CVC',
-                    hint: '123',
-                    icon: Icons.lock_outline,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(3),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
+                // --- GERÇEK ORANLI (1.586) DÖNEN KART WİDGET'I ---
+                AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, child) {
+                    final angle = _animation.value;
+                    final isBack = angle >= (pi / 2);
 
-            // --- ÖDEME YAP BUTONU ---
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _gonderiliyor
-                    ? null
-                    : () => _odemeVeSiparisTamamla(sepet),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 2,
+                    return Transform(
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.001) // Perspektif efekti
+                        ..rotateY(angle),
+                      alignment: Alignment.center,
+                      child: isBack
+                          ? Transform.scale(
+                              scaleX: -1,
+                              child: _buildCardBack(cardType),
+                            )
+                          : _buildCardFront(cardType),
+                    );
+                  },
                 ),
-                child: _gonderiliyor
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                const SizedBox(height: 24),
+
+                // --- KART FORM ALANLARI ---
+                _buildInputField(
+                  controller: _kartIsimController,
+                  label: 'Kart Üzerindeki İsim',
+                  hint: 'MEHMET YILMAZ',
+                  icon: Icons.person_outline,
+                  capitalization: TextCapitalization.characters,
+                ),
+                const SizedBox(height: 14),
+                _buildInputField(
+                  controller: _kartNoController,
+                  label: 'Kart Numarası',
+                  hint: '4535 3453 4534 5435',
+                  icon: Icons.credit_card,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(16),
+                    _CardNumberFormatter(),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildInputField(
+                        controller: _sktController,
+                        label: 'Son Kullanma (AA/YY)',
+                        hint: '12/28',
+                        icon: Icons.date_range,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(4),
+                          _ExpiryDateFormatter(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildInputField(
+                        controller: _cvvController,
+                        focusNode: _cvvFocusNode,
+                        label: 'CVV / CVC',
+                        hint: '123',
+                        icon: Icons.lock_outline,
+                        keyboardType: TextInputType.number,
+                        obscureText: true,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+
+                // --- ÖDEME YAP BUTONU ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _gonderiliyor
+                        ? null
+                        : () => _odemeVeSiparisTamamla(sepet),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: _gonderiliyor
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Text(
-                            'İşlem Yapılıyor...',
-                            style: TextStyle(
-                              color: Colors.white,
+                              SizedBox(width: 12),
+                              Text(
+                                'İşlem Yapılıyor...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'ÖDEMEYİ TAMAMLA (${widget.toplamTutar.toStringAsFixed(2)} ₺)',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
-                        ],
-                      )
-                    : Text(
-                        'ÖDEMEYİ TAMAMLA (${widget.toplamTutar.toStringAsFixed(2)} ₺)',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

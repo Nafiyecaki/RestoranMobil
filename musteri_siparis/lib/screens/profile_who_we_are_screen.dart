@@ -6,6 +6,7 @@ class ProfileWhoWeAreScreen extends StatelessWidget {
   const ProfileWhoWeAreScreen({super.key});
 
   static const Color _primaryColor = Color(0xFF2E7D32);
+  static const Color _primaryLight = Color(0xFF4CAF50);
   static const Color _primaryDark = Color(0xFF1B5E20);
 
   // Ekip sabit olarak burada tanımlı.
@@ -53,53 +54,99 @@ class ProfileWhoWeAreScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark
-          ? const Color(0xFF0F0F0F)
-          : const Color(0xFFF6F8F6),
+          ? const Color(0xFF0B0F0C)
+          : const Color(0xFFF3F6F3),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
-            expandedHeight: 190,
+            stretch: true,
+            expandedHeight: 240,
             backgroundColor: _primaryColor,
             foregroundColor: Colors.white,
             iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+              titlePadding: const EdgeInsets.only(left: 24, bottom: 18),
               title: const Text(
                 'Biz Kimiz',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  letterSpacing: 0.2,
+                ),
               ),
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [_primaryColor, _primaryDark],
+                    colors: [_primaryLight, _primaryColor, _primaryDark],
                   ),
                 ),
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
+                    // Dekoratif bulanık daireler
                     Positioned(
-                      right: -30,
-                      top: -20,
+                      right: -60,
+                      top: -50,
+                      child: _blurredCircle(220, Colors.white, 0.10),
+                    ),
+                    Positioned(
+                      left: -40,
+                      bottom: -60,
+                      child: _blurredCircle(180, Colors.white, 0.08),
+                    ),
+                    Positioned(
+                      right: 30,
+                      bottom: 30,
                       child: Icon(
                         Icons.restaurant_menu_rounded,
-                        size: 160,
-                        color: Colors.white.withValues(alpha: 0.08),
+                        size: 120,
+                        color: Colors.white.withValues(alpha: 0.10),
                       ),
                     ),
                     Positioned(
-                      left: 20,
-                      bottom: 56,
-                      right: 20,
-                      child: Text(
-                        'Restoran otomasyonu deneyimini hızlandırmak için '
-                        'birlikte çalışan 5 kişilik bir ekibiz.',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
+                      left: 24,
+                      right: 24,
+                      bottom: 64,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: const Text(
+                              '5 KİŞİLİK EKİP',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Restoran otomasyonu deneyimini hızlandırmak '
+                            'için birlikte çalışan tutkulu bir ekibiz.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.95),
+                              fontSize: 13.5,
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -108,19 +155,57 @@ class ProfileWhoWeAreScreen extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final member = _members[index];
-                return _TeamMemberCard(
-                  member: member,
-                  index: index,
-                  isDark: isDark,
+            padding: const EdgeInsets.fromLTRB(16, 22, 16, 28),
+            sliver: SliverLayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.crossAxisExtent >= 700;
+                if (isWide) {
+                  return SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisExtent: 96,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                        ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final member = _members[index];
+                      return _TeamMemberCard(
+                        member: member,
+                        index: index,
+                        isDark: isDark,
+                      );
+                    }, childCount: _members.length),
+                  );
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final member = _members[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _TeamMemberCard(
+                        member: member,
+                        index: index,
+                        isDark: isDark,
+                      ),
+                    );
+                  }, childCount: _members.length),
                 );
-              }, childCount: _members.length),
+              },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _blurredCircle(double size, Color color, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withValues(alpha: opacity),
       ),
     );
   }
@@ -140,7 +225,7 @@ class _TeamMember {
   });
 }
 
-class _TeamMemberCard extends StatelessWidget {
+class _TeamMemberCard extends StatefulWidget {
   const _TeamMemberCard({
     required this.member,
     required this.index,
@@ -151,14 +236,19 @@ class _TeamMemberCard extends StatelessWidget {
   final int index;
   final bool isDark;
 
-  static const Color _primaryColor = Color(0xFF2E7D32);
+  @override
+  State<_TeamMemberCard> createState() => _TeamMemberCardState();
+}
+
+class _TeamMemberCardState extends State<_TeamMemberCard> {
+  bool _hovering = false;
 
   static const List<List<Color>> _avatarGradients = [
-    [Color(0xFF43A047), Color(0xFF1B5E20)],
-    [Color(0xFF00897B), Color(0xFF004D40)],
-    [Color(0xFF6D4C41), Color(0xFF3E2723)],
-    [Color(0xFF5E35B1), Color(0xFF311B92)],
-    [Color(0xFF00838F), Color(0xFF006064)],
+    [Color(0xFF4CAF50), Color(0xFF1B5E20)],
+    [Color(0xFF26A69A), Color(0xFF004D40)],
+    [Color(0xFF8D6E63), Color(0xFF3E2723)],
+    [Color(0xFF7E57C2), Color(0xFF311B92)],
+    [Color(0xFF26C6DA), Color(0xFF006064)],
   ];
 
   String _initials(String name) {
@@ -170,6 +260,7 @@ class _TeamMemberCard extends StatelessWidget {
   }
 
   Widget _buildAvatar(List<Color> gradient) {
+    final member = widget.member;
     final fallback = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -185,7 +276,7 @@ class _TeamMemberCard extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w800,
-          fontSize: 16,
+          fontSize: 17,
         ),
       ),
     );
@@ -197,8 +288,8 @@ class _TeamMemberCard extends StatelessWidget {
     return ClipOval(
       child: Image.asset(
         member.imagePath!,
-        width: 52,
-        height: 52,
+        width: 56,
+        height: 56,
         fit: BoxFit.cover,
         // Görsel bulunamazsa (yol yanlışsa ya da henüz eklenmediyse)
         // otomatik olarak baş harfli avatara döner, uygulama çökmez.
@@ -209,63 +300,142 @@ class _TeamMemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradient = _avatarGradients[index % _avatarGradients.length];
+    final member = widget.member;
+    final isDark = widget.isDark;
+    final gradient = _avatarGradients[widget.index % _avatarGradients.length];
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171717) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE7EBE7),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(width: 52, height: 52, child: _buildAvatar(gradient)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hovering = true),
+          onExit: (_) => setState(() => _hovering = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            transform: _hovering
+                ? (Matrix4.identity()..translate(0.0, -2.0))
+                : Matrix4.identity(),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF151916) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _hovering
+                    ? gradient.first.withValues(alpha: 0.45)
+                    : (isDark
+                          ? const Color(0xFF262B27)
+                          : const Color(0xFFE7ECE7)),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _hovering
+                      ? gradient.first.withValues(alpha: isDark ? 0.18 : 0.14)
+                      : Colors.black.withValues(alpha: isDark ? 0.22 : 0.035),
+                  blurRadius: _hovering ? 18 : 10,
+                  offset: Offset(0, _hovering ? 8 : 4),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  member.name,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black87,
+                Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: gradient,
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? const Color(0xFF151916) : Colors.white,
+                    ),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: _buildAvatar(gradient),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  member.role,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        member.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF15201A),
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: gradient.first.withValues(
+                            alpha: isDark ? 0.18 : 0.10,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          member.role,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? gradient.first
+                                : Color.lerp(
+                                    gradient.first,
+                                    Colors.black,
+                                    0.25,
+                                  ),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        gradient.first.withValues(alpha: isDark ? 0.20 : 0.12),
+                        gradient.last.withValues(alpha: isDark ? 0.14 : 0.06),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(member.icon, size: 18, color: gradient.first),
                 ),
               ],
             ),
           ),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: _primaryColor.withValues(alpha: isDark ? 0.16 : 0.08),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(member.icon, size: 17, color: _primaryColor),
-          ),
-        ],
+        ),
       ),
     );
   }

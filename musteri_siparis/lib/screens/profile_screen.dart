@@ -579,10 +579,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Geniş (web/masaüstü) ekranlarda alt gezinme çubuğu yerine kullanılan
+  /// yan menü. Menü sayfasındaki _buildSideNav ile aynı mantığı kullanır.
+  Widget _buildSideNav(bool isDark) {
+    return NavigationRail(
+      backgroundColor: isDark ? const Color(0xFF151515) : Colors.white,
+      selectedIndex: 3,
+      onDestinationSelected: _onBottomNavTap,
+      labelType: NavigationRailLabelType.all,
+      selectedIconTheme: const IconThemeData(color: _primaryColor),
+      selectedLabelTextStyle: const TextStyle(
+        color: _primaryColor,
+        fontWeight: FontWeight.w700,
+      ),
+      unselectedIconTheme: IconThemeData(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: isDark ? Colors.grey[400] : const Color(0xFF6B7280),
+      ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.restaurant_menu_outlined),
+          selectedIcon: Icon(Icons.restaurant_menu),
+          label: Text('Menü'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart),
+          label: Text('Sepet'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.event_available_outlined),
+          selectedIcon: Icon(Icons.event_available),
+          label: Text('Rezervasyon'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
+          label: Text('Profil'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sepetProvider = context.watch<SepetProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 900px eşiği: altında mobil/tablet dikey düzen, üstünde masaüstü
+    // (web) yan menülü düzen kullanılır.
+    final isWide = screenWidth >= 900;
 
     return PopScope(
       canPop: false,
@@ -630,48 +678,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
           centerTitle: true,
         ),
-        body: _isLoading
-            ? _buildLoading()
-            : _errorMessage != null
-            ? _buildError()
-            : Column(
-                children: [
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: _handleRefresh,
-                      color: _primaryColor,
-                      child: SingleChildScrollView(
-                        controller: _profileScrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _buildProfileCard(isDark),
-                            const SizedBox(height: 16),
-                            _buildAddressSection(isDark),
-                            const SizedBox(height: 16),
-                            _buildOrdersSection(isDark),
-                            const SizedBox(height: 16),
-                            _buildOrderHistorySection(isDark),
-                            const SizedBox(height: 16),
-                            _buildFavoritesSection(isDark, sepetProvider),
-                            const SizedBox(height: 16),
-                            _buildWhoWeAreSection(isDark),
-                            const SizedBox(height: 16),
-                            _buildSettingsSection(isDark),
-                            const SizedBox(height: 16),
-                          ],
+        body: Row(
+          children: [
+            if (isWide) ...[
+              _buildSideNav(isDark),
+              const VerticalDivider(width: 1),
+            ],
+            Expanded(
+              child: _isLoading
+                  ? _buildLoading()
+                  : _errorMessage != null
+                  ? _buildError()
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _handleRefresh,
+                            color: _primaryColor,
+                            child: SingleChildScrollView(
+                              controller: _profileScrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(16),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 900,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _buildProfileCard(isDark),
+                                      const SizedBox(height: 16),
+                                      _buildAddressSection(isDark),
+                                      const SizedBox(height: 16),
+                                      _buildOrdersSection(isDark),
+                                      const SizedBox(height: 16),
+                                      _buildOrderHistorySection(isDark),
+                                      const SizedBox(height: 16),
+                                      _buildFavoritesSection(
+                                        isDark,
+                                        sepetProvider,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildWhoWeAreSection(isDark),
+                                      const SizedBox(height: 16),
+                                      _buildSettingsSection(isDark),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        _buildStickyLogoutButton(isDark),
+                      ],
                     ),
-                  ),
-                  _buildStickyLogoutButton(isDark),
-                ],
-              ),
-        bottomNavigationBar: AppBottomNav(
-          currentIndex: 3,
-          onTap: _onBottomNavTap,
+            ),
+          ],
         ),
+        bottomNavigationBar: isWide
+            ? null
+            : AppBottomNav(currentIndex: 3, onTap: _onBottomNavTap),
       ),
     );
   }

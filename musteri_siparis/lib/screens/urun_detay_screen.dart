@@ -371,258 +371,272 @@ class _UrunDetayScreenState extends State<UrunDetayScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        _getResimDosyasi(urun.urunAdi),
-                        height: 210,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
+                    ListView(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            _getResimDosyasi(urun.urunAdi),
                             height: 210,
-                            color: Colors.green.withValues(alpha: 0.08),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.fastfood,
-                              size: 56,
-                              color: Color(0xFF2E7D32),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      urun.urunAdi,
-                      style: TextStyle(
-                        fontSize: 40 / 2,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF202124),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_fiyatYaz(urun.fiyat)} TL',
-                      style: TextStyle(
-                        fontSize: 28 / 2,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF202124),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _kategoriAdi(urun.kategoriId),
-                      style: TextStyle(
-                        color: isDark ? Colors.grey[400] : Colors.grey[700],
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      (urun.aciklama?.isNotEmpty ?? false)
-                          ? urun.aciklama!
-                          : 'Bu ürün için açıklama bulunmuyor.',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildOpsiyonBolumu(
-                      baslik: 'Yanında tatlı ister misiniz?',
-                      altBaslik: 'Menümüzdeki tatlılar',
-                      urunler: _tatliOnerileri,
-                      seciliIds: _seciliTatliIds,
-                      tumunuGoster: _tatliTumunuGoster,
-                      isDark: isDark,
-                      onDegisti: (urunId, secildi) {
-                        setState(() {
-                          if (secildi) {
-                            _seciliTatliIds.add(urunId);
-                          } else {
-                            _seciliTatliIds.remove(urunId);
-                          }
-                        });
-                      },
-                      onTumunuGosterToggle: () {
-                        setState(() {
-                          _tatliTumunuGoster = !_tatliTumunuGoster;
-                        });
-                      },
-                    ),
-                    _buildOpsiyonBolumu(
-                      baslik: 'Yanında içecek ister misiniz?',
-                      altBaslik: 'Menümüzdeki içecekler',
-                      urunler: _icecekOnerileri,
-                      seciliIds: _seciliIcecekIds,
-                      tumunuGoster: _icecekTumunuGoster,
-                      isDark: isDark,
-                      onDegisti: (urunId, secildi) {
-                        setState(() {
-                          if (secildi) {
-                            _seciliIcecekIds.add(urunId);
-                          } else {
-                            _seciliIcecekIds.remove(urunId);
-                          }
-                        });
-                      },
-                      onTumunuGosterToggle: () {
-                        setState(() {
-                          _icecekTumunuGoster = !_icecekTumunuGoster;
-                        });
-                      },
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF171717) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF2E2E2E)
-                              : Colors.transparent,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 210,
+                                color: Colors.green.withValues(alpha: 0.08),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.fastfood,
+                                  size: 56,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ürün Notu',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                        const SizedBox(height: 14),
+                        Text(
+                          urun.urunAdi,
+                          style: TextStyle(
+                            fontSize: 40 / 2,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF202124),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_fiyatYaz(urun.fiyat)} TL',
+                          style: TextStyle(
+                            fontSize: 28 / 2,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF202124),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _kategoriAdi(urun.kategoriId),
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          (urun.aciklama?.isNotEmpty ?? false)
+                              ? urun.aciklama!
+                              : 'Bu ürün için açıklama bulunmuyor.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: isDark ? Colors.grey[300] : Colors.grey[700],
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildOpsiyonBolumu(
+                          baslik: 'Yanında tatlı ister misiniz?',
+                          altBaslik: 'Menümüzdeki tatlılar',
+                          urunler: _tatliOnerileri,
+                          seciliIds: _seciliTatliIds,
+                          tumunuGoster: _tatliTumunuGoster,
+                          isDark: isDark,
+                          onDegisti: (urunId, secildi) {
+                            setState(() {
+                              if (secildi) {
+                                _seciliTatliIds.add(urunId);
+                              } else {
+                                _seciliTatliIds.remove(urunId);
+                              }
+                            });
+                          },
+                          onTumunuGosterToggle: () {
+                            setState(() {
+                              _tatliTumunuGoster = !_tatliTumunuGoster;
+                            });
+                          },
+                        ),
+                        _buildOpsiyonBolumu(
+                          baslik: 'Yanında içecek ister misiniz?',
+                          altBaslik: 'Menümüzdeki içecekler',
+                          urunler: _icecekOnerileri,
+                          seciliIds: _seciliIcecekIds,
+                          tumunuGoster: _icecekTumunuGoster,
+                          isDark: isDark,
+                          onDegisti: (urunId, secildi) {
+                            setState(() {
+                              if (secildi) {
+                                _seciliIcecekIds.add(urunId);
+                              } else {
+                                _seciliIcecekIds.remove(urunId);
+                              }
+                            });
+                          },
+                          onTumunuGosterToggle: () {
+                            setState(() {
+                              _icecekTumunuGoster = !_icecekTumunuGoster;
+                            });
+                          },
+                        ),
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF171717)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
                               color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF202124),
+                                  ? const Color(0xFF2E2E2E)
+                                  : Colors.transparent,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _notController,
-                            maxLines: 2,
-                            decoration: InputDecoration(
-                              hintText: 'Örn: Soğansız, acısız, ekstra limon',
-                              hintStyle: TextStyle(
-                                color: isDark
-                                    ? Colors.grey[500]
-                                    : Colors.grey[600],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ürün Notu',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF202124),
+                                ),
                               ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF222222)
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _notController,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Örn: Soğansız, acısız, ekstra limon',
+                                  hintStyle: TextStyle(
+                                    color: isDark
+                                        ? Colors.grey[500]
+                                        : Colors.grey[600],
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? const Color(0xFF222222)
+                                      : Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF202124),
+                                ),
                               ),
-                            ),
-                            style: TextStyle(
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF202124),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF151515)
+                              : Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 16,
+                              offset: const Offset(0, -4),
+                            ),
+                          ],
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          minimum: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF2E7D32,
+                                    ).withValues(alpha: 0.3),
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        if (_adet > 1) {
+                                          setState(() => _adet--);
+                                        }
+                                      },
+                                      icon: const Icon(Icons.remove),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    Text(
+                                      '$_adet',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () => setState(() => _adet++),
+                                      icon: const Icon(Icons.add),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    _sepeteEkle(urun);
+                                    Navigator.pop(context, true);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2E7D32),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Sepete Ekle (${_fiyatYaz(_toplamTutar)} TL)',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF151515) : Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.07),
-                          blurRadius: 16,
-                          offset: const Offset(0, -4),
-                        ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      minimum: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                      child: Row(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF2E7D32,
-                                ).withValues(alpha: 0.3),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    if (_adet > 1) {
-                                      setState(() => _adet--);
-                                    }
-                                  },
-                                  icon: const Icon(Icons.remove),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                Text(
-                                  '$_adet',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () => setState(() => _adet++),
-                                  icon: const Icon(Icons.add),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _sepeteEkle(urun);
-                                Navigator.pop(context, true);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Text(
-                                'Sepete Ekle (${_fiyatYaz(_toplamTutar)} TL)',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+      ),
     );
   }
 }
